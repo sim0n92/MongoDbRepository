@@ -119,11 +119,11 @@ namespace JohnKnoop.MongoRepository
 			return this;
 		}
 
-		public TypeMappingBuilder<TEnity> WithIndex(Expression<Func<TEnity, object>> memberExpression, bool unique = false, bool sparse = false)
+		public TypeMappingBuilder<TEnity> WithIndex(string memberExpression, bool unique = false, bool sparse = false, bool descending = false)
 		{
 			var names = new Dictionary<string, int>
 			{
-				{PropertyNameExtractor.GetPropertyName(memberExpression), 1}
+				{memberExpression, descending ? -1 : 1}
 			};
 
 			var indexKeys = Newtonsoft.Json.JsonConvert.SerializeObject(names);
@@ -139,10 +139,15 @@ namespace JohnKnoop.MongoRepository
 			return this;
 		}
 
-		public TypeMappingBuilder<TEnity> WithIndex(IEnumerable<Expression<Func<TEnity, object>>> memberExpressions, bool unique = false, bool sparse = false)
+		public TypeMappingBuilder<TEnity> WithIndex(Expression<Func<TEnity, object>> memberExpression, bool unique = false, bool sparse = false, bool descending = false)
+		{
+			return WithIndex(PropertyNameExtractor.GetPropertyName(memberExpression), unique, sparse, descending);
+		}
+
+		public TypeMappingBuilder<TEnity> WithIndex(IEnumerable<string> memberExpressions, bool unique = false, bool sparse = false, bool descending = false)
 		{
 			var names =
-				memberExpressions.Select(PropertyNameExtractor.GetPropertyName).ToDictionary(x => x, x => 1);
+				memberExpressions.ToDictionary(x => x, x => descending ? -1 : 1);
 
 			var indexKeys = Newtonsoft.Json.JsonConvert.SerializeObject(names);
 
@@ -155,6 +160,11 @@ namespace JohnKnoop.MongoRepository
 			});
 
 			return this;
+		}
+
+		public TypeMappingBuilder<TEnity> WithIndex(IEnumerable<Expression<Func<TEnity, object>>> memberExpressions, bool unique = false, bool sparse = false, bool descending = false)
+		{
+			return WithIndex(memberExpressions.Select(PropertyNameExtractor.GetPropertyName), unique, sparse, descending);
 		}
 	}
 

@@ -55,7 +55,10 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 			// Empty all collections in database
 			foreach (var collectionName in _mongoClient.GetDatabase(DbName).ListCollectionNames().ToEnumerable())
 			{
-				_mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>(collectionName).DeleteMany(x => true);
+				if (!collectionName.Contains("system"))
+				{
+					_mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>(collectionName).DeleteMany(x => true);
+				}
 			}
 
 			// Add test documents to db

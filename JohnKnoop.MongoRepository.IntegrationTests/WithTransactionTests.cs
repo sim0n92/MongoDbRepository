@@ -8,9 +8,46 @@ using System.Transactions;
 using Xunit;
 using JohnKnoop.MongoRepository.Extensions;
 using FluentAssertions;
+using MongoDB.Bson;
 
 namespace JohnKnoop.MongoRepository.IntegrationTests
 {
+	public class SharedClass
+    {
+
+		public SharedClass(string name)
+		{
+			Name = name;
+		}
+
+		public string Name { get; private set; }
+	}
+
+	public class TestBaseEntity
+	{
+		public TestBaseEntity(string name, SharedClass c)
+		{
+			Id = ObjectId.GenerateNewId().ToString();
+			Name = name;
+			Clazz = c;
+		}
+
+		public string Id { get; private set; }
+		public string Name { get; private set; }
+
+		public SharedClass Clazz { get; private set; }
+	}
+
+	public class MyStandaloneEntity : TestBaseEntity
+	{
+		public MyStandaloneEntity(string name, SharedClass c) : base(name, c)
+		{
+			Age = 10;
+		}
+
+		public int Age { get; private set; }
+	}
+
 	public class ThrowingDummy
 	{
 		private int _callCount;
