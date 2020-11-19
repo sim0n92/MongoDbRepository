@@ -38,6 +38,8 @@ namespace JohnKnoop.MongoRepository
 		public bool Capped { get; internal set; }
 		public CappedCollectionConfig CappedCollectionConfig { get; internal set; }
 		public IList<DatabaseIndexDefinition> Indices { get; internal set; } = new List<DatabaseIndexDefinition>();
+
+		public Action<BsonClassMap> CustomClassMapper { get; internal set; } = default;
 	}
 
 	public class TypeMappingBuilder<TEnity>
@@ -166,6 +168,14 @@ namespace JohnKnoop.MongoRepository
 		{
 			return WithIndex(memberExpressions.Select(PropertyNameExtractor.GetPropertyName), unique, sparse, descending);
 		}
+
+		public TypeMappingBuilder<TEnity> WithCustomClassMapping(Action<BsonClassMap> classMapBuilder)
+        {
+			Mapping.CustomClassMapper = classMapBuilder;
+			
+			return this;
+        }
+		
 	}
 
 	public class DatabaseConfiguration
@@ -185,6 +195,8 @@ namespace JohnKnoop.MongoRepository
 
 		public DatabaseConfiguration Map<T>() => Map<T>(typeof(T).Name);
 
+		public DatabaseConfiguration Map<T>(Action<TypeMappingBuilder<T>> builderFactory) => Map<T>(typeof(T).Name, builderFactory);
+
 		public DatabaseConfiguration MapAlongWithSubclassesInSameAssebmly<T>(string collectionName, Action<TypeMappingBuilder<T>> builderFactory = null)
 		{
 			var builder = new TypeMappingBuilder<T>(new TypeMapping(collectionName));
@@ -196,6 +208,8 @@ namespace JohnKnoop.MongoRepository
 		}
 
 		public DatabaseConfiguration MapAlongWithSubclassesInSameAssebmly<T>() => MapAlongWithSubclassesInSameAssebmly<T>(typeof(T).Name);
+
+		public DatabaseConfiguration MapAlongWithSubclassesInSameAssebmly<T>(Action<TypeMappingBuilder<T>> builderFactory) => MapAlongWithSubclassesInSameAssebmly<T>(typeof(T).Name, builderFactory);
 	}
 
 	public class MongoConfigurationBuilder
@@ -377,15 +391,24 @@ namespace JohnKnoop.MongoRepository
 		    {
 			    var bsonClassMap = new BsonClassMap(t.Type);
 
-			    bsonClassMap.AutoMap();
-				
-				if (t.Mapping.IdMember != null)
-			    {
-				    bsonClassMap
-						.MapIdProperty(t.Mapping.IdMember)
-						.SetSerializer(new StringSerializer(BsonType.ObjectId))
-						.SetIdGenerator(new StringObjectIdGenerator());
-			    }
+			    
+
+				// eventual custom mappings
+				if(t.Mapping.CustomClassMapper != default)
+                {
+					t.Mapping.CustomClassMapper(bsonClassMap);
+				} else
+                {
+					bsonClassMap.AutoMap();
+
+					if (t.Mapping.IdMember != null)
+					{
+						bsonClassMap
+							.MapIdProperty(t.Mapping.IdMember)
+							.SetSerializer(new StringSerializer(BsonType.ObjectId))
+							.SetIdGenerator(new StringObjectIdGenerator());
+					}
+				}
 
 				if (!BsonClassMap.IsClassMapRegistered(t.Type))
 				{

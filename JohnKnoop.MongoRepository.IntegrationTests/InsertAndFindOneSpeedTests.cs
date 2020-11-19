@@ -1,6 +1,7 @@
 ﻿using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson.Serialization.IdGenerators;
 using MongoDB.Driver;
 using Newtonsoft.Json;
 using System;
@@ -127,6 +128,28 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		}
 	}
 
+	[Serializable, JsonObject]
+	[BsonDiscriminator(Required = true)]
+	[BsonKnownTypes(typeof(CustomMapped))]
+	public class CustomMapped
+    {
+		public CustomMapped(string name)
+		{
+			Name = name;
+		}
+
+		public void SetOther(string val)
+        {
+			OtherProtected = val;
+		}
+
+		public string Id { get; set; }
+
+		public string Name { get; protected set; }
+
+		public string OtherProtected { get; protected set; }
+	}
+
 	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
     public class InsertAndFindOneSpeedTests : IClassFixture<LaunchSettingsFixture>
     {
@@ -179,7 +202,16 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
                         x => x
                             .WithIndex("Files.Name", unique: false)
                     )
-
+					.Map<CustomMapped>(
+						x => x
+							.WithCustomClassMapping( 
+								cm => {
+									cm.AutoMap();
+									cm.MapIdProperty("Id").SetIdGenerator(ObjectIdGenerator.Instance);
+									cm.MapProperty("Name").SetElementName("_name");
+								}
+						)
+					)
                 )
 				.AutoEnlistWithTransactionScopes()
 				.Build();
@@ -209,6 +241,21 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 			var docsInTrash = await _mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>("DeletedObjects").CountDocumentsAsync(x => true);
 			docsInTrash.Should().Be(expected);
 		}
+
+		[Fact]
+		public async Task Custom_Mappings_test()
+        {
+			var r = _mongoClient.GetRepository<CustomMapped>();
+			CustomMapped cm = new CustomMapped("pippo");
+			cm.SetOther("Other value");
+			await r.InsertAsync(cm);
+
+			var rr = await r.GetAsync(cm.Id.ToString());
+
+			Assert.True(rr.Name == cm.Name);
+			Assert.True(rr.OtherProtected == cm.OtherProtected);
+		}
+
 
 		private static string[] Tags = new string[] {"A", "B", "C", "D", "E", "F", "G", "H" };
 
