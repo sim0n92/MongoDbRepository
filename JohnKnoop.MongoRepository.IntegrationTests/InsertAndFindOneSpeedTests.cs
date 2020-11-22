@@ -143,7 +143,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 			OtherProtected = val;
 		}
 
-		public string Id { get; set; }
+		public ObjectId Id { get; set; }
 
 		public string Name { get; protected set; }
 
