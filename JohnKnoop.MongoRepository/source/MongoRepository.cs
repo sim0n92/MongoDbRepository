@@ -130,6 +130,11 @@ namespace JohnKnoop.MongoRepository
 			return this.MongoCollection.Aggregate(options);
 		}
 
+		public IAsyncCursor<BsonDocument> Aggregate(BsonDocument[] pipeline, AggregateOptions options = null, CancellationToken cancellationToken = default)
+		{
+			return this.MongoCollection.Aggregate<BsonDocument>(pipeline, options, cancellationToken);
+		}
+
 		public async Task<IList<SoftDeletedEntity>> ListTrashAsync(int? offset = null, int? limit = null)
 		{
 			var result = await this._trash.Find(x => true)

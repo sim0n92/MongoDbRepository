@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Transactions;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Operations;
 using MongoDB.Driver.Linq;
@@ -83,7 +84,10 @@ namespace JohnKnoop.MongoRepository
 			where TDerivedEntity : TEntity;
 
 		IAggregateFluent<TEntity> Aggregate(AggregateOptions options = null);
-	    Task DeletePropertyAsync(Expression<Func<TEntity, bool>> filter, Expression<Func<TEntity, object>> propertyExpression);
+		IAsyncCursor<BsonDocument> Aggregate(BsonDocument[] pipeline, AggregateOptions options = null, CancellationToken cancellationToken = default);
+
+
+		Task DeletePropertyAsync(Expression<Func<TEntity, bool>> filter, Expression<Func<TEntity, object>> propertyExpression);
 
         Task<DeleteResult> DeleteByIdAsync(string id, bool softDelete = false);
 		Task<DeleteResult> DeleteManyAsync(Expression<Func<TEntity, bool>> filter, bool softDelete = false);
