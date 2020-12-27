@@ -40,12 +40,11 @@ namespace JohnKnoop.MongoRepository
 			return new MongoConfigurationBuilder();
 		}
 
-		/// <summary>
+		/// <returns></returns>
 		/// WHen using transactions,
 		/// collections cannot be created implicitly at first write operation.
-		/// </summary>
+		/// <param name="mongoClient"></param>
 		/// <param name="tenantKey"></param>
-		/// <returns></returns>
 		internal static void EnsureCollectionsCreated(IMongoClient mongoClient, string tenantKey = null)
 		{
 			MongoConfiguration.EnsureCollectionsCreated(mongoClient, tenantKey);

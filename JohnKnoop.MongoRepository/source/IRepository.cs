@@ -198,7 +198,10 @@ namespace JohnKnoop.MongoRepository
 		/// Starts a new transaction and executes the provided delegate.
 		/// Will retry on TransientTransactionError.
 		/// </summary>
+		/// <param name="transactionBody"></param>
+		/// <param name="type"></param>
 		/// <param name="maxRetries">If 0, it will retry forever.</param>
+		/// <returns></returns>
 		Task WithTransactionAsync(Func<Task> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = default);
 	}
 
@@ -313,7 +316,7 @@ namespace JohnKnoop.MongoRepository
 			}
 		}
 
-		public static async Task Retry(Action transactionBody, int maxRetries = default)
+		public static void Retry(Action transactionBody, int maxRetries = default)
 		{
 			var tries = 0;
 			var startTime = DateTime.UtcNow;
