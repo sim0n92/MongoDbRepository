@@ -56,32 +56,32 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
         /// <summary>
         /// Foto name / file name
         /// </summary>
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
 
 		/// <summary>
 		/// File mime type
 		/// </summary>
-		public string ContentType { get; set; }
+		public string ContentType { get; set; } = "";
 
 		/// <summary>
 		/// Storage Id, can be any kind of path, absolute relative, file will be loacated using this path
 		/// </summary>
-		public string StorageId { get; set; }
+		public string StorageId { get; set; } = "";
 
 		/// <summary>
 		/// DateTime of foto creation
 		/// </summary>
-		public DateTime Created { get; set; }
+		public DateTime Created { get; set; } = default;
 
 		/// <summary>
 		/// Name of camera what did this foto
 		/// </summary>
-		public string SourceName { get; set; }
+		public string SourceName { get; set; } = "";
 
 		/// <summary>
 		/// Kind of foto
 		/// </summary>
-		public StorableKindEnum Kind { get; set; }
+		public StorableKindEnum Kind { get; set; } = StorableKindEnum.A;
 
 		/// <summary>
 		/// List of arbitrary tags
@@ -104,8 +104,8 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 		public ObjectId Id { get; set; }
 
-		private HashSet<string> _tags;
-		private List<MyFile> _files;
+		private HashSet<string> _tags = new HashSet<string>();
+		private List<MyFile> _files = new List<MyFile>();
 
 		/// <summary>
 		/// List of arbitrary tags
@@ -147,7 +147,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 		public string Name { get; protected set; }
 
-		public string OtherProtected { get; protected set; }
+		public string OtherProtected { get; protected set; } = "";
 	}
 
 	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
@@ -157,8 +157,8 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		private const string CollectionName = "FileGroups";
 		private readonly MongoClient _mongoClient;
 		private readonly IRepository<FileGroup> _repository;
-		private readonly string _baseEntityId;
-		private readonly string _derivedEntityId;
+		private readonly string _baseEntityId = "";
+		private readonly string _derivedEntityId = "";
 
 		private readonly ITestOutputHelper _testOutputHelper;
 
