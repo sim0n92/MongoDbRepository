@@ -113,7 +113,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		[BsonIgnoreIfNull]
 		public HashSet<string> Tags
 		{
-			get { return _tags ?? (_tags = new HashSet<string>()); }
+			get { return _tags ??= new HashSet<string>(); }
 			set { _tags = value; }
 		}
 
@@ -123,7 +123,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		[BsonIgnoreIfNull]
 		public List<MyFile> Files
 		{
-			get { return _files ?? (_files = new List<MyFile>()); }
+			get { return _files ??= new List<MyFile>(); }
 			set { _files = value; }
 		}
 	}
