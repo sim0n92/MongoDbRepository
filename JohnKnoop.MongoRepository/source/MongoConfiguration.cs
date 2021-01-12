@@ -670,6 +670,8 @@ namespace JohnKnoop.MongoRepository
 				var collectionsInDb = kvp.Value;
 				var db = client.GetDatabase(qualifiedDbName);
 
+				List<Task> tsks = new List<Task>();
+				
 				foreach (var typeDef in collectionsInDb)
 				{
 					var entityType = typeDef.Type;
@@ -683,9 +685,11 @@ namespace JohnKnoop.MongoRepository
 						.GetMethod(nameof(MongoConfiguration.EnsureIndexesAndCap), BindingFlags.NonPublic | BindingFlags.Static);
 					var genericEnsureIndexesMethod = ensureIndexesMethod.MakeGenericMethod(entityType);
 
-					var task = (Task)genericEnsureIndexesMethod.Invoke(null, new object[] { collection, true });
-					task.GetAwaiter().GetResult();
+					tsks.Add((Task)genericEnsureIndexesMethod.Invoke(null, new object[] { collection, true }));
 				}
+
+				// sync async code safelly !!!
+				Task.Run(() => Task.WaitAll(tsks.ToArray()));
 
 				// Create the trash collection
 
