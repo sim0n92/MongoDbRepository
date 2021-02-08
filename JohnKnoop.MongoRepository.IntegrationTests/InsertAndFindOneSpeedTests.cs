@@ -157,8 +157,8 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		private const string CollectionName = "FileGroups";
 		private readonly MongoClient _mongoClient;
 		private readonly IRepository<FileGroup> _repository;
-		private readonly string _baseEntityId = "";
-		private readonly string _derivedEntityId = "";
+		//private readonly string _baseEntityId = "";
+		//private readonly string _derivedEntityId = "";
 
 		private readonly ITestOutputHelper _testOutputHelper;
 

@@ -158,8 +158,8 @@ namespace JohnKnoop.MongoRepository
 			var filter = Builders<TEntity>.Filter.Eq("_id", ObjectId.Parse(id));
 
 			return AmbientSession != null
-				? await this.MongoCollection.ReplaceOneAsync(AmbientSession, filter, entity, new UpdateOptions { IsUpsert = upsert }).ConfigureAwait(false)
-				: await this.MongoCollection.ReplaceOneAsync(filter, entity, new UpdateOptions { IsUpsert = upsert }).ConfigureAwait(false);
+				? await this.MongoCollection.ReplaceOneAsync(AmbientSession, filter, entity, new ReplaceOptions { IsUpsert = upsert }).ConfigureAwait(false)
+				: await this.MongoCollection.ReplaceOneAsync(filter, entity, new ReplaceOptions { IsUpsert = upsert }).ConfigureAwait(false);
 		}
 
 		public async Task<ReplaceOneResult> ReplaceOneAsync(Expression<Func<TEntity, bool>> filter, TEntity entity, bool upsert = false)
@@ -169,8 +169,8 @@ namespace JohnKnoop.MongoRepository
 			await MongoConfiguration.EnsureIndexesAndCap(MongoCollection);
 
 			return AmbientSession != null
-				? await this.MongoCollection.ReplaceOneAsync(AmbientSession, filter, entity, new UpdateOptions { IsUpsert = upsert }).ConfigureAwait(false)
-				: await this.MongoCollection.ReplaceOneAsync(filter, entity, new UpdateOptions { IsUpsert = upsert }).ConfigureAwait(false);
+				? await this.MongoCollection.ReplaceOneAsync(AmbientSession, filter, entity, new ReplaceOptions { IsUpsert = upsert }).ConfigureAwait(false)
+				: await this.MongoCollection.ReplaceOneAsync(filter, entity, new ReplaceOptions { IsUpsert = upsert }).ConfigureAwait(false);
 		}
 
 		public Task<TReturnProjection> FindOneAndUpdateAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, Expression<Func<TEntity, TReturnProjection>> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.BeforeUpdate, bool upsert = false)
