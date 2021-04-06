@@ -10,8 +10,8 @@
     <PackageReference Include="Docker.DotNet" Version="3.125.4" />
     <PackageReference Include="FluentAssertions" Version="5.10.3" />
     <PackageReference Include="Json.Net" Version="1.0.25" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.3" />
-    <PackageReference Include="MongoDB.Driver" Version="2.11.6" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.4" />
+    <PackageReference Include="MongoDB.Driver" Version="2.12.1" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3">
       <PrivateAssets>all</PrivateAssets>
