@@ -10,6 +10,8 @@
 		<LangVersion>7.1</LangVersion>
 		<PackageReleaseNotes>FindOneAndDeleteAsync</PackageReleaseNotes>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<AssemblyVersion>5.5.0.21122</AssemblyVersion>
+		<FileVersion>5.5.0.21122</FileVersion>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
