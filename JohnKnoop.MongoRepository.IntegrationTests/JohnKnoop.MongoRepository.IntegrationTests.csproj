@@ -1,11 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net5.0-windows</TargetFramework>
     <nullable>enable</nullable>
     <IsPackable>false</IsPackable>
-    <AssemblyVersion>1.0.0.21122</AssemblyVersion>
-    <FileVersion>1.0.0.21122</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
