@@ -1044,8 +1044,19 @@ namespace JohnKnoop.MongoRepository
 			return await (await this.MongoCollection.OfType<TDerivedEntity>().FindAsync(filter, new FindOptions<TDerivedEntity, TReturnProjection>{
 				Projection = Builders<TDerivedEntity>.Projection.Expression(returnProjection)
 			})).FirstOrDefaultAsync();
-		} 
+		}
 		#endregion
+
+		public Task<List<dynamic>> Distinct(string fieldName, FilterDefinition<TEntity> filter)
+        {
+			//var cursor = await this.MongoCollection.FindAsync(filter, new FindOptions<TEntity, object>
+			//{
+			//	Projection = Builders<TEntity>.Projection.Include(fieldName)
+			//}).ConfigureAwait(false);
+
+			return this.MongoCollection.Distinct<dynamic>(fieldName, filter).ToListAsync();
+
+		}
 
 		public IMongoQueryable<TEntity> Query()
 		{

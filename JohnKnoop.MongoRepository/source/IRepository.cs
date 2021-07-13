@@ -43,6 +43,8 @@ namespace JohnKnoop.MongoRepository
 		Task InsertManyAsync(ICollection<TEntity> entities);
 		Task InsertManyAsync<TDerivedEntity>(ICollection<TDerivedEntity> entities) where TDerivedEntity : TEntity;
 
+		Task<List<dynamic>> Distinct(string fieldName, FilterDefinition<TEntity> filter);
+
 		IMongoQueryable<TEntity> Query();
 	    IMongoQueryable<TDerivedEntity> Query<TDerivedEntity>() where TDerivedEntity : TEntity;
 		
