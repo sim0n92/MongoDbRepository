@@ -105,14 +105,14 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 			persistedItems.Should().HaveCount(4).And.SatisfyRespectively(
 				x => x.ShouldHaveProperty(y => y.Id, standaloneItem.Id).And
-					.ShouldSatisfy(y => y.Supply.SuppliersItemReferences.Should().ContainKey(supplierId).WhichValue.Should().Be("ABC")).And
+					.ShouldSatisfy(y => y.Supply.SuppliersItemReferences.Should().ContainKey(supplierId).WhoseValue.Should().Be("ABC")).And
 					.ShouldSatisfy(y => y.Supply.LastPurchasePrice!.OrderedPrice.Should().Be(10)).And
 					.ShouldSatisfy(y => y.Supply.Suppliers.Should().ContainSingle(z => z == supplierId)),
 				x => x.ShouldHaveProperty(y => y.Id, variableItem.Id),
 				x => x.ShouldHaveProperty(y => y.Id, variant1.Id).And
-					.ShouldSatisfy(y => y.Supply.SuppliersItemReferences.Should().ContainKey(supplierId).WhichValue.Should().Be("DEF_1")),
+					.ShouldSatisfy(y => y.Supply.SuppliersItemReferences.Should().ContainKey(supplierId).WhoseValue.Should().Be("DEF_1")),
 				x => x.ShouldHaveProperty(y => y.Id, variant2.Id).And
-					.ShouldSatisfy(y => y.Supply.SuppliersItemReferences.Should().ContainKey(supplierId).WhichValue.Should().Be("DEF_2"))
+					.ShouldSatisfy(y => y.Supply.SuppliersItemReferences.Should().ContainKey(supplierId).WhoseValue.Should().Be("DEF_2"))
 			);
 		}
 	}
