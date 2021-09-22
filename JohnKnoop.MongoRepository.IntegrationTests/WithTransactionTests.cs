@@ -9,6 +9,7 @@ using Xunit;
 using JohnKnoop.MongoRepository.Extensions;
 using FluentAssertions;
 using MongoDB.Bson;
+using JohnKnoop.MongoRepository.IntegrationTests.TestEntities;
 
 namespace JohnKnoop.MongoRepository.IntegrationTests
 {
@@ -71,6 +72,30 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		}
 	}
 
+	public class SharedClass
+	{
+		public string Name { get; private set; }
+
+		public SharedClass(string name)
+		{
+			Name = name;
+		}
+	}
+
+	public class MyStandaloneEntity
+	{
+		public MyStandaloneEntity(string name, SharedClass myProperty)
+		{
+			Id = ObjectId.GenerateNewId().ToString();
+			Name = name;
+			MyProperty = myProperty;
+		}
+
+		public string Id { get; private set; }
+		public string Name { get; private set; }
+		public SharedClass MyProperty { get; private set; }
+	}
+
 	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
 	public class WithTransactionTests : IClassFixture<LaunchSettingsFixture>
 	{
@@ -81,30 +106,75 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 			MongoRepository.Configure()
 				.Database("TestDb", x => x
 					.Map<MyStandaloneEntity>("MyStandaloneEntities")
+					.Map<ArrayContainer>("ArrayContainers")
 				)
 				.AutoEnlistWithTransactionScopes()
 				.Build();
 
 			this._mongoClient = new MongoClient(Environment.GetEnvironmentVariable("MongoDbConnectionString"));
 
-			_mongoClient.GetDatabase("TestDb").GetCollection<MyStandaloneEntity>("MyStandaloneEntities").DeleteMany(x => true);
+			_mongoClient.GetDatabase("TestDb").GetCollection<BsonDocument>("MyStandaloneEntities").DeleteMany(x => true);
+			_mongoClient.GetDatabase("TestDb").GetCollection<BsonDocument>("ArrayContainers").DeleteMany(x => true);
 		}
 
 		[Fact]
 		public async Task TransactionScope_WithoutMaxRetries_ShouldRetryUntilSuccessful()
 		{
 			var throwingDummy = new ThrowingDummy(4);
-			var repo = _mongoClient.GetRepository<MyStandaloneEntity>();
+			var repo = _mongoClient.GetRepository<ArrayContainer>();
+
+			var doc = new ArrayContainer(new List<Dummy> { new Dummy("olle"), new Dummy("bengt") }, "roy");
+			await repo.InsertAsync(doc);
 
 			await repo.WithTransactionAsync(async () =>
-				{
-					throwingDummy.TryMe();
-					await repo.InsertAsync(new MyStandaloneEntity("test", new SharedClass("test")));
-				}, TransactionType.TransactionScope, maxRetries: 0);
+			{
+				doc.Dummies.Add(new Dummy("rolle"));
 
-			var allSaved = await _mongoClient.GetRepository<MyStandaloneEntity>().GetAll().ToListAsync();
+				await repo.ReplaceOneAsync(
+					x => x.Id == doc.Id,
+					doc
+				);
 
-			allSaved.Should().HaveCount(1);
+				await repo.UpdateOneAsync(
+					x => x.Id == doc.Id,
+					x => x.Push(x => x.Dummies, new Dummy("fia"))
+				);
+			}, TransactionType.TransactionScope, 3);
+
+			var allSaved = await _mongoClient.GetRepository<ArrayContainer>().GetAll().ToListAsync();
+
+			allSaved.Should().ContainSingle()
+				.Which.Dummies.Should().HaveCount(4);
+		}
+
+		[Fact]
+		public async Task AutomaticallyEnlistsToAmbientTransaction()
+		{
+			var throwingDummy = new ThrowingDummy(4);
+			var repo = _mongoClient.GetRepository<ArrayContainer>();
+
+			var doc = new ArrayContainer(new List<Dummy> { new Dummy("olle"), new Dummy("bengt") }, "roy");
+			await repo.InsertAsync(doc);
+
+			await repo.WithTransactionAsync(async () =>
+			{
+				doc.Dummies.Add(new Dummy("rolle"));
+
+				await repo.ReplaceOneAsync(
+					x => x.Id == doc.Id,
+					doc
+				);
+
+				await repo.UpdateOneAsync(
+					x => x.Id == doc.Id,
+					x => x.Push(x => x.Dummies, new Dummy("fia"))
+				);
+			}, TransactionType.TransactionScope);
+
+			var allSaved = await _mongoClient.GetRepository<ArrayContainer>().GetAll().ToListAsync();
+
+			allSaved.Should().ContainSingle()
+				.Which.Dummies.Should().HaveCount(4);
 		}
 
 		[Fact]
@@ -145,23 +215,41 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		}
 
 		[Fact]
-		public async Task NativeTransaction_WithMaxRetries_ShouldRetryUntilMaxRetriesReached()
+		public async Task NativeTransaction_ReturnsValue()
 		{
-			var throwingDummy = new ThrowingDummy(5);
-			var repo = _mongoClient.GetRepository<MyStandaloneEntity>();
+			var repo = _mongoClient.GetRepository<ArrayContainer>();
+			var doc = new ArrayContainer(new List<Dummy> { new Dummy("olle"), new Dummy("bengt") }, "roy");
+			await repo.InsertAsync(doc);
 
-			await Assert.ThrowsAsync<MongoException>(async () =>
+			var result = await repo.WithTransactionAsync(async () =>
 			{
-				await repo.WithTransactionAsync(async () =>
-				{
-					throwingDummy.TryMe();
-					await repo.InsertAsync(new MyStandaloneEntity("test", new SharedClass("test")));
-				}, maxRetries: 3);
-			});
+				return await repo.FindOneAndUpdateAsync(
+					filter: x => x.Id == doc.Id,
+					update: x => x.AddToSet(y => y.Dummies, new Dummy("steve")),
+					returnProjection: x => x.Dummies
+				);
+			}, TransactionType.MongoDB);
 
-			var allSaved = await _mongoClient.GetRepository<MyStandaloneEntity>().GetAll().ToListAsync();
+			result.Should().HaveCount(3);
+		}
 
-			allSaved.Should().BeEmpty();
+		[Fact]
+		public async Task MongoDbTransaction_ReturnsValue()
+		{
+			var repo = _mongoClient.GetRepository<ArrayContainer>();
+			var doc = new ArrayContainer(new List<Dummy> { new Dummy("olle"), new Dummy("bengt") }, "roy");
+			await repo.InsertAsync(doc);
+
+			var result = await repo.WithTransactionAsync(async () =>
+			{
+				return await repo.FindOneAndUpdateAsync(
+					filter: x => x.Id == doc.Id,
+					update: x => x.AddToSet(y => y.Dummies, new Dummy("steve")),
+					returnProjection: x => x.Dummies
+				);
+			}, TransactionType.TransactionScope);
+
+			result.Should().HaveCount(3);
 		}
 	}
 }

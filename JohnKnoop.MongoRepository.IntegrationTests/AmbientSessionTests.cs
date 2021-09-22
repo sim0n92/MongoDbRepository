@@ -1,4 +1,5 @@
 using FluentAssertions;
+using JohnKnoop.MongoRepository.IntegrationTests.TestEntities;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
@@ -35,7 +36,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 	static class MyStaticInserter
 	{
-		public static async Task InsertDocument(DummyEntity entity, IRepository<DummyEntity> repo)
+		public static async Task InsertDocument<T>(T entity, IRepository<T> repo)
 		{
 			await repo.InsertAsync(entity);
 		}
@@ -51,6 +52,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 			MongoRepository.Configure()
 				.DatabasePerTenant("TestDb", x => x
 					.MapAlongWithSubclassesInSameAssebmly<DummyEntity>("DummyEntities")
+					.Map<ArrayContainer>("ArrayContainers")
 				)
 				.AutoEnlistWithTransactionScopes()
 				.Build();
@@ -59,10 +61,12 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 			_mongoClient.GetRepository<DummyEntity>("tenant_a").DeleteManyAsync(x => true).Wait();
 			_mongoClient.GetRepository<DummyEntity>("tenant_b").DeleteManyAsync(x => true).Wait();
+			_mongoClient.GetRepository<ArrayContainer>("tenant_c").DeleteManyAsync(x => true).Wait();
 			_mongoClient.GetRepository<DummyEntity>().DeleteManyAsync(x => true).Wait();
 
 			_mongoClient.GetRepository<DummyEntity>("tenant_a").PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
 			_mongoClient.GetRepository<DummyEntity>("tenant_b").PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
+			_mongoClient.GetRepository<ArrayContainer>("tenant_c").PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
 			_mongoClient.GetRepository<DummyEntity>().PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
 		}
 
@@ -234,8 +238,6 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 					var repo = _mongoClient.GetRepository<DummyEntity>("tenant_a");
 					await Task.Delay(1);
 
-					//repo.EnlistWithCurrentTransactionScope();
-
 					await repo.InsertAsync(new DummyEntity("Hello!"));
 
 					transaction.Complete();
@@ -248,9 +250,10 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 				{
 					var repo = _mongoClient.GetRepository<DummyEntity>("tenant_b");
 
-					//repo.EnlistWithCurrentTransactionScope();
+					await Task.Delay(1);
 
-					await Task.Run(async () => await repo.InsertAsync(new DummyEntity("Hola!")));
+					await MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo);
+					MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo).Wait();
 
 					// No commit
 				}
@@ -261,8 +264,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 				using (var transaction = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
 				{
 					var repo = _mongoClient.GetRepository<DummyEntity>("tenant_a");
-
-					//repo.EnlistWithCurrentTransactionScope();
+					await Task.Delay(1);
 
 					await Task.Run(async () => await repo.InsertAsync(new DummyEntity("Hello again!")));
 
@@ -275,8 +277,6 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 				using (var transaction = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
 				{
 					var repo = _mongoClient.GetRepository<DummyEntity>("tenant_a");
-
-					//repo.EnlistWithCurrentTransactionScope();
 
 					await Task.Delay(50);
 					await repo.InsertAsync(new DummyEntity("Hello good sir or madam!"));
@@ -292,16 +292,12 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 					var repo = _mongoClient.GetRepository<DummyEntity>("tenant_b");
 					await Task.Delay(1);
 
-					//repo.EnlistWithCurrentTransactionScope();
-
 					await MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo);
 					MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo).Wait();
 
 					transaction.Complete();
 				}
 			});
-
-
 
 			await Task.WhenAll(request1, request2, request3, request4, request5);
 
@@ -396,6 +392,38 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 			allDocumentsForTenantA.Should().ContainSingle(x => x.MyProperty == "Hello!");
 			allDocumentsForTenantA.Should().ContainSingle(x => x.MyProperty == "Hello good sir or madam!");
 			allDocumentsForTenantB.Count(x => x.MyProperty == "Hola senor").Should().Be(2);
+		}
+
+		[Fact]
+		public async Task AutomaticallyEnlistsWithAmbientTransaction()
+		{
+			var throwingDummy = new ThrowingDummy(4);
+			var repo = _mongoClient.GetRepository<ArrayContainer>("tenant_c");
+
+			var doc = new ArrayContainer(new List<Dummy> { new Dummy("olle"), new Dummy("bengt") }, "roy");
+			await repo.InsertAsync(doc);
+
+			using (var trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+			{
+				doc.Dummies.Add(new Dummy("rolle"));
+
+				await repo.ReplaceOneAsync(
+					x => x.Id == doc.Id,
+					doc
+				);
+
+				await repo.UpdateOneAsync(
+					x => x.Id == doc.Id,
+					x => x.Push(x => x.Dummies, new Dummy("fia"))
+				);
+
+				trans.Complete();
+			}
+
+			var allSaved = await repo.GetAll().ToListAsync();
+
+			allSaved.Should().ContainSingle()
+				.Which.Dummies.Should().HaveCount(4);
 		}
 	}
 }

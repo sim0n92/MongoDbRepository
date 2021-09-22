@@ -45,8 +45,8 @@ namespace JohnKnoop.MongoRepository
 
 		Task<List<dynamic>> Distinct(string fieldName, FilterDefinition<TEntity> filter);
 
-		IMongoQueryable<TEntity> Query();
-	    IMongoQueryable<TDerivedEntity> Query<TDerivedEntity>() where TDerivedEntity : TEntity;
+		IMongoQueryable<TEntity> Query(AggregateOptions options = null);
+		IMongoQueryable<TDerivedEntity> Query<TDerivedEntity>(AggregateOptions options = null) where TDerivedEntity : TEntity;
 		
 		/// <returns>An instance of <c>TEntity</c> or null</returns>
 		Task<TEntity> GetAsync(string id);
@@ -56,33 +56,33 @@ namespace JohnKnoop.MongoRepository
 		Task<TReturnProjection> GetAsync<TReturnProjection>(string id, Expression<Func<TEntity, TReturnProjection>> returnProjection);
 		Task<TReturnProjection> GetAsync<TDerivedEntity, TReturnProjection>(string id, Expression<Func<TDerivedEntity, TReturnProjection>> returnProjection) where TDerivedEntity : TEntity;
 
-		IFindFluent<TEntity, TEntity> GetAll();
-		IFindFluent<TEntity, TEntity> Find(Expression<Func<TEntity, bool>> filter);
-		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(Expression<Func<TDerivedEntity, bool>> filter) where TDerivedEntity : TEntity;
+		IFindFluent<TEntity, TEntity> GetAll(FindOptions options = null);
+		IFindFluent<TEntity, TEntity> Find(Expression<Func<TEntity, bool>> filter, FindOptions options = null);
+		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(Expression<Func<TDerivedEntity, bool>> filter, FindOptions options = null) where TDerivedEntity : TEntity;
 		
-		IFindFluent<TEntity, TEntity> Find(Expression<Func<TEntity, object>> property, string regexPattern, string regexOptions = "i");
-		IFindFluent<TEntity, TEntity> Find(FieldDefinition<TEntity> property, string regexPattern, string regexOptions = "i");
-		IFindFluent<TEntity, TEntity> Find(IEnumerable<Expression<Func<TEntity, object>>> properties, string regexPattern, string regexOptions = "i");
-		IFindFluent<TEntity, TEntity> Find(IEnumerable<FieldDefinition<TEntity>> properties, string regexPattern, string regexOptions = "i");
+		IFindFluent<TEntity, TEntity> Find(Expression<Func<TEntity, object>> property, string regexPattern, string regexOptions = "i", FindOptions options = null);
+		IFindFluent<TEntity, TEntity> Find(FieldDefinition<TEntity> property, string regexPattern, string regexOptions = "i", FindOptions options = null);
+		IFindFluent<TEntity, TEntity> Find(IEnumerable<Expression<Func<TEntity, object>>> properties, string regexPattern, string regexOptions = "i", FindOptions options = null);
+		IFindFluent<TEntity, TEntity> Find(IEnumerable<FieldDefinition<TEntity>> properties, string regexPattern, string regexOptions = "i", FindOptions options = null);
 
-		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(Expression<Func<TDerivedEntity, object>> property, string regexPattern, string regexOptions = "i") where TDerivedEntity : TEntity;
-		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(FieldDefinition<TDerivedEntity> property, string regexPattern, string regexOptions = "i") where TDerivedEntity : TEntity;
-		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(IEnumerable<Expression<Func<TDerivedEntity, object>>> properties, string regexPattern, string regexOptions = "i") where TDerivedEntity : TEntity;
-		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(IEnumerable<FieldDefinition<TDerivedEntity>> properties, string regexPattern, string regexOptions = "i") where TDerivedEntity : TEntity;
+		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(Expression<Func<TDerivedEntity, object>> property, string regexPattern, string regexOptions = "i", FindOptions options = null) where TDerivedEntity : TEntity;
+		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(FieldDefinition<TDerivedEntity> property, string regexPattern, string regexOptions = "i", FindOptions options = null) where TDerivedEntity : TEntity;
+		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(IEnumerable<Expression<Func<TDerivedEntity, object>>> properties, string regexPattern, string regexOptions = "i", FindOptions options = null) where TDerivedEntity : TEntity;
+		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(IEnumerable<FieldDefinition<TDerivedEntity>> properties, string regexPattern, string regexOptions = "i", FindOptions options = null) where TDerivedEntity : TEntity;
 
-		Task<IAsyncCursor<TEntity>> FindAsync(Expression<Func<TEntity, bool>> filter);
-		Task<IAsyncCursor<TDerivedEntity>> FindAsync<TDerivedEntity>(Expression<Func<TDerivedEntity, bool>> filter) where TDerivedEntity : TEntity;
-		Task<IAsyncCursor<TReturnProjection>> FindAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Expression<Func<TEntity, TReturnProjection>> returnProjection);
-		Task<IAsyncCursor<TReturnProjection>> FindAsync<TDerivedEntity, TReturnProjection>(Expression<Func<TDerivedEntity, bool>> filter, Expression<Func<TDerivedEntity, TReturnProjection>> returnProjection) where TDerivedEntity : TEntity;
+		Task<IAsyncCursor<TEntity>> FindAsync(Expression<Func<TEntity, bool>> filter, FindOptions<TEntity, TEntity> options = null);
+		Task<IAsyncCursor<TDerivedEntity>> FindAsync<TDerivedEntity>(Expression<Func<TDerivedEntity, bool>> filter, FindOptions<TDerivedEntity, TDerivedEntity> options = null) where TDerivedEntity : TEntity;
+		Task<IAsyncCursor<TReturnProjection>> FindAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Expression<Func<TEntity, TReturnProjection>> returnProjection, FindOptions<TEntity, TReturnProjection> options = null);
+		Task<IAsyncCursor<TReturnProjection>> FindAsync<TDerivedEntity, TReturnProjection>(Expression<Func<TDerivedEntity, bool>> filter, Expression<Func<TDerivedEntity, TReturnProjection>> returnProjection, FindOptions<TDerivedEntity, TReturnProjection> options = null) where TDerivedEntity : TEntity;
 
 		Task<TEntity> FindOneAsync(Expression<Func<TEntity, bool>> filter);
 		Task<TDerivedEntity> FindOneAsync<TDerivedEntity>(Expression<Func<TDerivedEntity, bool>> filter) where TDerivedEntity : TEntity;
 		Task<TReturnProjection> FindOneAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Expression<Func<TEntity, TReturnProjection>> returnProjection);
 		Task<TReturnProjection> FindOneAsync<TDerivedEntity, TReturnProjection>(Expression<Func<TDerivedEntity, bool>> filter, Expression<Func<TDerivedEntity, TReturnProjection>> returnProjection) where TDerivedEntity : TEntity;
 
-		IFindFluent<TEntity, TEntity> Find(FilterDefinition<TEntity> filter);
+		IFindFluent<TEntity, TEntity> Find(FilterDefinition<TEntity> filter, FindOptions options = null);
 
-		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(FilterDefinition<TDerivedEntity> filter)
+		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(FilterDefinition<TDerivedEntity> filter, FindOptions options = null)
 			where TDerivedEntity : TEntity;
 
 		IAggregateFluent<TEntity> Aggregate(AggregateOptions options = null);
@@ -91,7 +91,7 @@ namespace JohnKnoop.MongoRepository
 
 		Task DeletePropertyAsync(Expression<Func<TEntity, bool>> filter, Expression<Func<TEntity, object>> propertyExpression);
 
-        Task<DeleteResult> DeleteByIdAsync(string id, bool softDelete = false);
+		Task<DeleteResult> DeleteByIdAsync(string id, bool softDelete = false);
 		Task<DeleteResult> DeleteManyAsync(Expression<Func<TEntity, bool>> filter, bool softDelete = false);
 		Task<DeleteResult> DeleteManyAsync<TDerived>(Expression<Func<TDerived, bool>> filter, bool softDelete = false) where TDerived : TEntity;
 
@@ -114,30 +114,33 @@ namespace JohnKnoop.MongoRepository
 		Task<ReplaceOneResult> ReplaceOneAsync(Expression<Func<TEntity, bool>> filter, TEntity entity, bool upsert = false);
 		Task<BulkWriteResult<TEntity>> ReplaceManyAsync(IList<ReplaceManyCommand<TEntity>> commands, bool upsert = false);
 
-        [Obsolete("This overload of UpdateOneAsync will be removed in a future version")]
-        Task<UpdateResult> UpdateOneAsync(string filter, string update, bool upsert = false);
+		[Obsolete("This overload of UpdateOneAsync will be removed in a future version")]
+		Task<UpdateResult> UpdateOneAsync(string filter, string update, bool upsert = false);
 
 		Task<UpdateResult> UpdateOneAsync(string id, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, bool upsert = false);
 		Task<UpdateResult> UpdateOneAsync(string id, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, UpdateOptions options);
 
 
-        Task<UpdateResult> UpdateOneAsync(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, bool upsert = false);
-        Task<UpdateResult> UpdateOneAsync(FilterDefinition<TEntity> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, bool upsert = false);
-        
-        Task<UpdateResult> UpdateOneAsync(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, UpdateOptions options);
-        Task<UpdateResult> UpdateOneAsync(FilterDefinition<TEntity> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, UpdateOptions options);
+		Task<UpdateResult> UpdateOneAsync(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, bool upsert = false);
+		Task<UpdateResult> UpdateOneAsync(FilterDefinition<TEntity> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, bool upsert = false);
 		
-        Task<UpdateResult> UpdateOneAsync<TDerived>(string id, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, bool upsert = false) where TDerived : TEntity;
-        Task<UpdateResult> UpdateOneAsync<TDerived>(string id, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, UpdateOptions options) where TDerived : TEntity;
+		Task<UpdateResult> UpdateOneAsync(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, UpdateOptions options);
+		Task<UpdateResult> UpdateOneAsync(FilterDefinition<TEntity> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, UpdateOptions options);
 		
-        Task<UpdateResult> UpdateOneAsync<TDerived>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, bool upsert = false) where TDerived : TEntity;
-        Task<UpdateResult> UpdateOneAsync<TDerived>(FilterDefinition<TDerived> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, bool upsert = false) where TDerived : TEntity;
-        Task<UpdateResult> UpdateOneAsync<TDerived>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, UpdateOptions options) where TDerived : TEntity;
-        Task<UpdateResult> UpdateOneAsync<TDerived>(FilterDefinition<TDerived> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, UpdateOptions options) where TDerived : TEntity;
+		Task<UpdateResult> UpdateOneAsync<TDerived>(string id, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, bool upsert = false) where TDerived : TEntity;
+		Task<UpdateResult> UpdateOneAsync<TDerived>(string id, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, UpdateOptions options) where TDerived : TEntity;
+		
+		Task<UpdateResult> UpdateOneAsync<TDerived>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, bool upsert = false) where TDerived : TEntity;
+		Task<UpdateResult> UpdateOneAsync<TDerived>(FilterDefinition<TDerived> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, bool upsert = false) where TDerived : TEntity;
+		Task<UpdateResult> UpdateOneAsync<TDerived>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, UpdateOptions options) where TDerived : TEntity;
+		Task<UpdateResult> UpdateOneAsync<TDerived>(FilterDefinition<TDerived> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, UpdateOptions options) where TDerived : TEntity;
 
 
 		Task<TReturnProjection> FindOneAndUpdateAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, Expression<Func<TEntity, TReturnProjection>> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false);
 		Task<TReturnProjection> FindOneAndUpdateAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, ProjectionDefinition<TEntity, TReturnProjection> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false);
+
+		Task<TReturnProjection> FindOneAndUpdateAsync<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, Expression<Func<TDerived, TReturnProjection>> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false) where TDerived : TEntity;
+		Task<TReturnProjection> FindOneAndUpdateAsync<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, ProjectionDefinition<TDerived, TReturnProjection> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false) where TDerived : TEntity;
 
 		/// <summary>
 		/// Executes multiple update operations in one batch
@@ -156,10 +159,12 @@ namespace JohnKnoop.MongoRepository
 			Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update,
 			UpdateOptions options = null);
 
-        [Obsolete("This overload of UpdateOneAsync will be removed in a future version")]
-		Task UpdateManyAsync(Expression<Func<TEntity, bool>> filter,
-			string update,
-			UpdateOptions options = null);
+		/// <summary>
+		/// Applies the same update to multiple entities
+		/// </summary>
+		Task UpdateManyAsync<TDerived>(Expression<Func<TDerived, bool>> filter,
+			Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update,
+			UpdateOptions options = null) where TDerived : TEntity;
 
 		/// <summary>
 		/// Increments a counter (stored in the _counters collection) and returns the new value
@@ -192,7 +197,7 @@ namespace JohnKnoop.MongoRepository
 		/// 
 		/// This method will throw if there is no ambient TransactionScope.
 		/// </summary>
-		void EnlistWithCurrentTransactionScope();
+		void EnlistWithCurrentTransactionScope(int maxRetries = default);
 		Transaction StartTransaction(ClientSessionOptions sessionOptions = null, MongoDB.Driver.TransactionOptions transactionOptions = null);
 		IRepository<TEntity> WithReadPreference(ReadPreference readPreference);
 
@@ -200,11 +205,18 @@ namespace JohnKnoop.MongoRepository
 		/// Starts a new transaction and executes the provided delegate.
 		/// Will retry on TransientTransactionError.
 		/// </summary>
-		/// <param name="transactionBody"></param>
-		/// <param name="type"></param>
+		/// <param name="transactionBody">Needs to be idempotent because of potential retries</param>
 		/// <param name="maxRetries">If 0, it will retry forever.</param>
 		/// <returns></returns>
 		Task WithTransactionAsync(Func<Task> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = default);
+
+		/// <summary>
+		/// Starts a new transaction and executes the provided delegate.
+		/// Will retry on TransientTransactionError.
+		/// </summary>
+		/// <param name="transactionBody">Needs to be idempotent because of potential retries</param>
+		/// <param name="maxRetries">If 0, it will retry forever.</param>
+		Task<TReturn> WithTransactionAsync<TReturn>(Func<Task<TReturn>> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = default);
 	}
 
 	public enum TransactionType
@@ -213,18 +225,20 @@ namespace JohnKnoop.MongoRepository
 		TransactionScope
 	}
 
-	public class TransactionEnlistment : IEnlistmentNotification
+	public class RetryingTransactionEnlistment : IEnlistmentNotification
 	{
 		private readonly IClientSessionHandle _session;
+		private readonly int _maxRetries;
 
-		public TransactionEnlistment(IClientSessionHandle session)
+		public RetryingTransactionEnlistment(IClientSessionHandle session, int maxRetries = 0)
 		{
 			_session = session;
+			_maxRetries = maxRetries;
 		}
 
 		public void Commit(Enlistment enlistment)
 		{
-			Retryer.Retry(() => _session.CommitTransaction());
+			Retryer.Retry(() => _session.CommitTransaction(), _maxRetries);
 			enlistment.Done();
 		}
 
@@ -262,9 +276,6 @@ namespace JohnKnoop.MongoRepository
 			_onCompleted = onCompleted;
 		}
 
-		public Task RetryAsync(Func<Task> transactionBody, int maxRetries = default) =>
-			Retryer.RetryAsync(transactionBody, maxRetries);
-
 		public async Task CommitAsync(CancellationToken cancellation = default)
 		{
 			await Retryer.RetryAsync(async() => await _session.CommitTransactionAsync(cancellation));
@@ -285,7 +296,7 @@ namespace JohnKnoop.MongoRepository
 
 			if (!_isCompleted)
 			{
-				_onCompleted(false); 
+				_onCompleted(false);
 			}
 		}
 	}
@@ -296,6 +307,14 @@ namespace JohnKnoop.MongoRepository
 
 		public static async Task RetryAsync(Func<Task> transactionBody, int maxRetries = default)
 		{
+			await RetryAsync<object>(async () => {
+				await transactionBody();
+				return null;
+			}, maxRetries);
+		}
+
+		public static async Task<TReturnType> RetryAsync<TReturnType>(Func<Task<TReturnType>> transactionBody, int maxRetries = default)
+		{
 			var tries = 0;
 			var startTime = DateTime.UtcNow;
 
@@ -303,8 +322,8 @@ namespace JohnKnoop.MongoRepository
 			{
 				try
 				{
-					await transactionBody();
-					return;
+					var result = await transactionBody();
+					return result;
 				}
 				catch (MongoException ex) when (ex.HasErrorLabel("TransientTransactionError"))
 				{
