@@ -72,29 +72,6 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		}
 	}
 
-	public class SharedClass
-	{
-		public string Name { get; private set; }
-
-		public SharedClass(string name)
-		{
-			Name = name;
-		}
-	}
-
-	public class MyStandaloneEntity
-	{
-		public MyStandaloneEntity(string name, SharedClass myProperty)
-		{
-			Id = ObjectId.GenerateNewId().ToString();
-			Name = name;
-			MyProperty = myProperty;
-		}
-
-		public string Id { get; private set; }
-		public string Name { get; private set; }
-		public SharedClass MyProperty { get; private set; }
-	}
 
 	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
 	public class WithTransactionTests : IClassFixture<LaunchSettingsFixture>
