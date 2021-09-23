@@ -39,6 +39,8 @@ namespace JohnKnoop.MongoRepository
 
 	public interface IRepository<TEntity>
 	{
+		Task EnsureIndexesAndCap();
+
 		Task InsertAsync(TEntity entity);
 		Task InsertManyAsync(ICollection<TEntity> entities);
 		Task InsertManyAsync<TDerivedEntity>(ICollection<TDerivedEntity> entities) where TDerivedEntity : TEntity;
@@ -217,6 +219,23 @@ namespace JohnKnoop.MongoRepository
 		/// <param name="transactionBody">Needs to be idempotent because of potential retries</param>
 		/// <param name="maxRetries">If 0, it will retry forever.</param>
 		Task<TReturn> WithTransactionAsync<TReturn>(Func<Task<TReturn>> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = default);
+
+		/// <summary>
+		/// Starts a new transaction and executes the provided delegate.
+		/// Will retry on TransientTransactionError.
+		/// </summary>
+		/// <param name="transactionBody">Needs to be idempotent because of potential retries</param>
+		/// <param name="maxRetries">If 0, it will retry forever.</param>
+		/// <returns></returns>
+		Task WithTransactionAsync(Func<int, Task> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = default);
+
+		/// <summary>
+		/// Starts a new transaction and executes the provided delegate.
+		/// Will retry on TransientTransactionError.
+		/// </summary>
+		/// <param name="transactionBody">Needs to be idempotent because of potential retries</param>
+		/// <param name="maxRetries">If 0, it will retry forever.</param>
+		Task<TReturn> WithTransactionAsync<TReturn>(Func<int, Task<TReturn>> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = default);
 	}
 
 	public enum TransactionType
@@ -328,6 +347,38 @@ namespace JohnKnoop.MongoRepository
 				catch (MongoException ex) when (ex.HasErrorLabel("TransientTransactionError"))
 				{
 					if (maxRetries != default && tries >= maxRetries &&	DateTime.UtcNow - startTime < TransactionTimeout)
+					{
+						throw;
+					}
+
+					tries++;
+				}
+			}
+		}
+
+		public static async Task RetryAsync(Func<int, Task> transactionBody, int maxRetries = default)
+		{
+			await RetryAsync<object>(async (int trySqnr) => {
+				await transactionBody(trySqnr);
+				return null;
+			}, maxRetries);
+		}
+
+		public static async Task<TReturnType> RetryAsync<TReturnType>(Func<int, Task<TReturnType>> transactionBody, int maxRetries = default)
+		{
+			var tries = 0;
+			var startTime = DateTime.UtcNow;
+
+			while (true)
+			{
+				try
+				{
+					var result = await transactionBody(tries);
+					return result;
+				}
+				catch (MongoException ex) when (ex.HasErrorLabel("TransientTransactionError"))
+				{
+					if (maxRetries != default && tries >= maxRetries && DateTime.UtcNow - startTime < TransactionTimeout)
 					{
 						throw;
 					}

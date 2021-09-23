@@ -111,6 +111,11 @@ namespace JohnKnoop.MongoRepository
 			return deletedObject.Entity;
 		}
 
+		public async Task EnsureIndexesAndCap()
+        {
+			await MongoConfiguration.EnsureIndexesAndCap(MongoCollection);
+		}
+
 		public async Task InsertAsync(TEntity entity)
 		{
 			TryAutoEnlistWithCurrentTransactionScope();
@@ -1259,10 +1264,11 @@ namespace JohnKnoop.MongoRepository
 			}
 			else
 			{
+				// repeat until timeout (default mongo db)
 				using (var session = await MongoCollection.Database.Client.StartSessionAsync())
 				{
 					SessionContainer.SetSession(session);
-					return await session.WithTransactionAsync(async (session, cancel) => await transactionBody());
+					return await session.WithTransactionAsync(async (session, cancel) => await transactionBody().ConfigureAwait(false));
 				}
 			}
 		}
@@ -1282,6 +1288,7 @@ namespace JohnKnoop.MongoRepository
 			}
 			else
 			{
+				// repeat until timeout (default mongo db)
 				using (var session = await MongoCollection.Database.Client.StartSessionAsync())
 				{
 					SessionContainer.SetSession(session);
@@ -1290,6 +1297,60 @@ namespace JohnKnoop.MongoRepository
 						return 0;
 					});
 				}
+			}
+		}
+
+		public async Task<TReturn> WithTransactionAsync<TReturn>(Func<int, Task<TReturn>> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = 0)
+		{
+			if (type == TransactionType.TransactionScope)
+			{
+				return await Retryer.RetryAsync(async (int trySqnr) => {
+					using (var trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+					{
+						EnlistWithCurrentTransactionScope(maxRetries);
+						var result = await transactionBody(trySqnr).ConfigureAwait(false);
+						trans.Complete();
+
+						return result;
+					}
+				}, maxRetries);
+			}
+			else
+			{
+				// repeat until timeout (default mongo db)
+				using (var session = await MongoCollection.Database.Client.StartSessionAsync())
+				{
+					SessionContainer.SetSession(session);
+					return await session.WithTransactionAsync(async (session, cancel) => await transactionBody(-1).ConfigureAwait(false));
+				}
+			}
+		}
+
+		public async Task WithTransactionAsync(Func<int, Task> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = 0)
+		{
+			if (type == TransactionType.TransactionScope)
+			{
+				await Retryer.RetryAsync(async (int trySqnr) => {
+					using (var trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled))
+					{
+						EnlistWithCurrentTransactionScope(maxRetries);
+						await transactionBody(trySqnr).ConfigureAwait(false);
+						trans.Complete();
+					}
+				}, maxRetries);
+			}
+			else
+			{
+				// repeat until timeout (default mongo db)
+				using (var session = await MongoCollection.Database.Client.StartSessionAsync())
+				{
+					SessionContainer.SetSession(session);
+					await session.WithTransactionAsync(async (session, cancel) => {
+						await transactionBody(-1).ConfigureAwait(false);
+						return 0;
+					});
+				}
+				
 			}
 		}
 
