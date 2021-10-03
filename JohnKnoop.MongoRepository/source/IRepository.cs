@@ -208,6 +208,7 @@ namespace JohnKnoop.MongoRepository
 		/// Will retry on TransientTransactionError.
 		/// </summary>
 		/// <param name="transactionBody">Needs to be idempotent because of potential retries</param>
+		/// <param name="type"></param>
 		/// <param name="maxRetries">If 0, it will retry forever.</param>
 		/// <returns></returns>
 		Task WithTransactionAsync(Func<Task> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = default);
@@ -217,6 +218,7 @@ namespace JohnKnoop.MongoRepository
 		/// Will retry on TransientTransactionError.
 		/// </summary>
 		/// <param name="transactionBody">Needs to be idempotent because of potential retries</param>
+		/// <param name="type"></param>
 		/// <param name="maxRetries">If 0, it will retry forever.</param>
 		Task<TReturn> WithTransactionAsync<TReturn>(Func<Task<TReturn>> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = default);
 
@@ -225,6 +227,7 @@ namespace JohnKnoop.MongoRepository
 		/// Will retry on TransientTransactionError.
 		/// </summary>
 		/// <param name="transactionBody">Needs to be idempotent because of potential retries</param>
+		/// <param name="type"></param>
 		/// <param name="maxRetries">If 0, it will retry forever.</param>
 		/// <returns></returns>
 		Task WithTransactionAsync(Func<int, Task> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = default);
@@ -234,6 +237,7 @@ namespace JohnKnoop.MongoRepository
 		/// Will retry on TransientTransactionError.
 		/// </summary>
 		/// <param name="transactionBody">Needs to be idempotent because of potential retries</param>
+		/// <param name="type"></param>
 		/// <param name="maxRetries">If 0, it will retry forever.</param>
 		Task<TReturn> WithTransactionAsync<TReturn>(Func<int, Task<TReturn>> transactionBody, TransactionType type = TransactionType.MongoDB, int maxRetries = default);
 	}
