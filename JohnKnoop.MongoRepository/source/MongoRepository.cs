@@ -36,6 +36,9 @@ namespace JohnKnoop.MongoRepository
 
 	public static class MongoRepository
 	{
+		private static object _lock = new object();
+		private static bool _EnsureCollectionsCreated_Called = false;
+
 		public static MongoConfigurationBuilder Configure()
 		{
 			return new MongoConfigurationBuilder();
@@ -48,7 +51,15 @@ namespace JohnKnoop.MongoRepository
 		/// <param name="tenantKey"></param>
 		internal static void EnsureCollectionsCreated(IMongoClient mongoClient, string tenantKey = null)
 		{
-			MongoConfiguration.EnsureCollectionsCreated(mongoClient, tenantKey);
+			// this ww will relax allot, we will call it only first time !!! in Fenix world it is not necessary more then one time !!!
+			lock (_lock)
+			{
+				if (!_EnsureCollectionsCreated_Called)
+				{
+					_EnsureCollectionsCreated_Called = true;
+					MongoConfiguration.EnsureCollectionsCreated(mongoClient, tenantKey);
+				}
+			}
 		}
 
 		public static IList<string> GetDatabaseNames(string tenantKey = null) =>
