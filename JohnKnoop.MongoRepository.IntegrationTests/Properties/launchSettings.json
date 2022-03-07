@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "JohnKnoop.MongoRepository.IntegrationTests": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "MongoDbConnectionString": "mongodb://Admin:3uvision@localhost:27117/test?authSource=admin&readPreference=primary&appname=fenix&ssl=false"
+      }
+    }
+  }
+}

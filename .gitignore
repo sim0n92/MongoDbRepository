@@ -2,9 +2,10 @@
 **/obj/
 **/*.csproj\.user
 *.DotSettings
-launchSettings.json
+#launchSettings.json
 LocalDev/
 
 *.sln
 
 .vs/
+*.bak
