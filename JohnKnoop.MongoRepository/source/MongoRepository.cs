@@ -1119,6 +1119,16 @@ namespace JohnKnoop.MongoRepository
 			return this.MongoCollection.FindAsync(filter, options);
 		}
 
+		public Task<IAsyncCursor<TEntity>> FindAsync(FilterDefinition<TEntity> filter, FindOptions<TEntity, TEntity> options = null)
+		{
+			return this.MongoCollection.FindAsync(filter, options);
+		}
+
+		public Task<long> CountAsync(FilterDefinition<TEntity> filter, CountOptions options = null)
+		{
+			return this.MongoCollection.CountDocumentsAsync(filter, options);
+		}
+
 		public Task<IAsyncCursor<TDerivedEntity>> FindAsync<TDerivedEntity>(
 			Expression<Func<TDerivedEntity, bool>> filter,
 			FindOptions<TDerivedEntity, TDerivedEntity> options = null) where TDerivedEntity : TEntity
