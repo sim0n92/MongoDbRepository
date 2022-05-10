@@ -12,11 +12,11 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		public static AndConstraint<TTestable> ShouldHaveProperty<TTestable, TProperty>(this TTestable testable, Expression<Func<TTestable, TProperty>> propertySelector, TProperty expectedValue)
 		{
 			var memberName = PropertyNameExtractor.GetPropertyName(propertySelector);
-			var property = testable.GetType().GetProperty(memberName);
-			var actualValue = property.GetValue(testable);
+			var property = testable?.GetType().GetProperty(memberName);
+			var actualValue = property?.GetValue(testable);
 
 			Execute.Assertion
-				.ForCondition(actualValue.Equals(expectedValue))
+				.ForCondition(actualValue?.Equals(expectedValue) ?? false)
 				.FailWith($"Expected the property {memberName} to have value {expectedValue} but found {actualValue}");
 
 			return new AndConstraint<TTestable>(testable);
