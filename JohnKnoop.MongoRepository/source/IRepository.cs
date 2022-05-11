@@ -52,6 +52,7 @@ namespace JohnKnoop.MongoRepository
 		
 		/// <returns>An instance of <c>TEntity</c> or null</returns>
 		Task<TEntity> GetAsync(string id);
+		TEntity Get(string objectId);
 		/// <returns>An instance of <c>T</c> or null</returns>
 		Task<TDerivedEntity> GetAsync<TDerivedEntity>(string id) where TDerivedEntity : TEntity;
 		

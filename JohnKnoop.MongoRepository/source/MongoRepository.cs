@@ -1219,6 +1219,17 @@ namespace JohnKnoop.MongoRepository
 			return await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
 		}
 
+		public TEntity Get(string objectId)
+		{
+			if (objectId == null) throw new ArgumentNullException(nameof(objectId));
+
+			var filter = new BsonDocument("_id", ObjectId.Parse(objectId));
+
+			var cursor = this.MongoCollection.Find(filter);
+
+			return cursor.FirstOrDefault();
+		}
+
 		public async Task<TDerivedEntity> GetAsync<TDerivedEntity>(string objectId) where TDerivedEntity : TEntity
 		{
 			if (objectId == null) throw new ArgumentNullException(nameof(objectId));
