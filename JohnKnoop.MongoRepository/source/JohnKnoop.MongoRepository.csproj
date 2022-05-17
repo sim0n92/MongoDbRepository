@@ -19,9 +19,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="MongoDB.Bson" version="2.14.1" />
-		<PackageReference Include="MongoDB.Driver" version="2.14.1" />
-		<PackageReference Include="MongoDB.Driver.Core" version="2.14.1" />
+		<PackageReference Include="MongoDB.Bson" version="2.15.1" />
+		<PackageReference Include="MongoDB.Driver" version="2.15.1" />
+		<PackageReference Include="MongoDB.Driver.Core" version="2.15.1" />
 		<PackageReference Include="Newtonsoft.Json" version="13.0.1" />
 		<PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
 	</ItemGroup>
