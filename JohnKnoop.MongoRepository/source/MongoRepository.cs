@@ -36,7 +36,7 @@ namespace JohnKnoop.MongoRepository
 
 	public static class MongoRepository
 	{
-		private static object _lock = new object();
+		private static CriticalSection _cs = new CriticalSection();
 		private static bool _EnsureCollectionsCreated_Called = false;
 
 		public static MongoConfigurationBuilder Configure()
@@ -52,7 +52,7 @@ namespace JohnKnoop.MongoRepository
 		internal static void EnsureCollectionsCreated(IMongoClient mongoClient, string tenantKey = null)
 		{
 			// this ww will relax allot, we will call it only first time !!! in Fenix world it is not necessary more then one time !!!
-			lock (_lock)
+			using (var _lock = _cs.Lock(TimeSpan.FromMilliseconds(-1)))
 			{
 				if (!_EnsureCollectionsCreated_Called)
 				{

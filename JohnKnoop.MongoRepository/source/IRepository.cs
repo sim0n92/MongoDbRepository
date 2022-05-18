@@ -11,7 +11,8 @@ using MongoDB.Driver.Linq;
 
 namespace JohnKnoop.MongoRepository
 {
-	public class SoftDeletedEntity<TEntity>
+
+    public class SoftDeletedEntity<TEntity>
 	{
 		internal SoftDeletedEntity(TEntity entity, DateTime timestampDeletedUtc)
 		{
