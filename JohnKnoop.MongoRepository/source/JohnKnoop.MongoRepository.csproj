@@ -18,6 +18,10 @@
 	  <NoWarn>1701;1702;1591</NoWarn>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <DefineConstants />
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="MongoDB.Bson" version="2.15.1" />
 		<PackageReference Include="MongoDB.Driver" version="2.15.1" />
