@@ -301,13 +301,13 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		}
 
 		[Fact]
-		public async Task Insert_10000_records()
+		public async Task Insert_100_records()
 		{
 			List<FileGroup> records = new List<FileGroup>();
 
 			int cntStarts1 = 0;
 
-			for (int i = 0; i < 10000; ++i)
+			for (int i = 0; i < 100; ++i)
 			{
 				var r = MakeRecord();
 				records.Add(r);
@@ -349,7 +349,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 			sw.Restart();
 			//var ret1 = _repository.Query().Where(x => x.Files.Any(f => what.All(e => f.Tags.Contains(e)))).ToList();
 			// var ret1 = _repository.Query().Where(x => x.Files.Any(f => f.Name.StartsWith("File_1"))).ToList();
-			var ret1 = _repository.Query().Where(x => x.Files.Any(f => f.Name == "File_9780")).ToList();
+			var ret1 = _repository.Query().Where(x => x.Files.Any(f => f.Name == "File_97")).ToList();
 
 			sw.Stop();
 
@@ -369,7 +369,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 			// By id
 			//var doc = await _repository.FindOneAndDeleteAsync(r.I);
 			//doc.Name.Should().Be("Mary");
-			await AssertNumberOfDocumentsInCollection(10000);
+			await AssertNumberOfDocumentsInCollection(100);
 		}
 
 		
