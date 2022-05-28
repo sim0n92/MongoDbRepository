@@ -478,7 +478,7 @@ namespace JohnKnoop.MongoRepository
 
 			var database = mongoClient.GetDatabase(databaseName);
 
-			return database.GetCollection<TEntity>(_collections[entityType].CollectionName);
+			return database.GetCollection<TEntity>(_collections[entityType].CollectionName).WithWriteConcern(WriteConcern.W3).WithReadConcern(ReadConcern.Majority);
 		}
 
 		public static IRepository<TEntity> GetRepository<TEntity>(IMongoClient mongoClient, string tenantKey = null)
