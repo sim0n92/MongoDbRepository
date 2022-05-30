@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
-		<Version>6.2.2</Version>
+		
 		<Description>An easily configurable repository abstraction for MongoDB with first-class support for multi-tenancy</Description>
 		<PackageProjectUrl>https://github.com/johnknoop/MongoRepository</PackageProjectUrl>
 		<PackageTags>repository mongodb multitenant</PackageTags>
@@ -10,8 +10,12 @@
 		<LangVersion>8.0</LangVersion>
 		<PackageReleaseNotes>Bugfixing around enlisting with ambient transactions and async execution flow</PackageReleaseNotes>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-		<AssemblyVersion>5.5.0.21122</AssemblyVersion>
-		<FileVersion>5.5.0.21122</FileVersion>
+    <Version>$(MainVersion)</Version>
+		<AssemblyVersion>$(MainVersion)</AssemblyVersion>
+		<FileVersion>$(MainVersion)</FileVersion>
+    <PackageVersion>$(MainVersion)</PackageVersion>
+		<Configurations>Debug;Release;MakeNuget</Configurations>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -25,4 +29,12 @@
 		<PackageReference Include="Newtonsoft.Json" version="13.0.1" />
 		<PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
 	</ItemGroup>
+
+  <Target Name="PublishNuget" Condition="'$(Configuration)|$(Platform)' == 'MakeNuget|AnyCPU'" AfterTargets="pack">
+    <GetAssemblyIdentity AssemblyFiles="$(TargetPath)">
+      <Output TaskParameter="Assemblies" ItemName="myAssemblyInfo" />
+    </GetAssemblyIdentity>
+    <Message Text="PublishNuget" />
+    <Exec Command="dotnet nuget push bin\MakeNuget\$(TargetName).$(MainVersion).nupkg --source ZeroX-3u-gitlab  --skip-duplicate" />
+  </Target>
 </Project>
