@@ -53,6 +53,7 @@ namespace JohnKnoop.MongoRepository
 		
 		/// <returns>An instance of <c>TEntity</c> or null</returns>
 		Task<TEntity> GetAsync(string id);
+		TEntity Get(string objectId);
 		/// <returns>An instance of <c>T</c> or null</returns>
 		Task<TDerivedEntity> GetAsync<TDerivedEntity>(string id) where TDerivedEntity : TEntity;
 		
@@ -74,6 +75,11 @@ namespace JohnKnoop.MongoRepository
 		IFindFluent<TDerivedEntity, TDerivedEntity> Find<TDerivedEntity>(IEnumerable<FieldDefinition<TDerivedEntity>> properties, string regexPattern, string regexOptions = "i", FindOptions options = null) where TDerivedEntity : TEntity;
 
 		Task<IAsyncCursor<TEntity>> FindAsync(Expression<Func<TEntity, bool>> filter, FindOptions<TEntity, TEntity> options = null);
+		Task<IAsyncCursor<TEntity>> FindAsync(FilterDefinition<TEntity> filter, FindOptions<TEntity, TEntity> options = null);
+
+		// count async
+		Task<long> CountAsync(FilterDefinition<TEntity> filter, CountOptions options = null);
+
 		Task<IAsyncCursor<TDerivedEntity>> FindAsync<TDerivedEntity>(Expression<Func<TDerivedEntity, bool>> filter, FindOptions<TDerivedEntity, TDerivedEntity> options = null) where TDerivedEntity : TEntity;
 		Task<IAsyncCursor<TReturnProjection>> FindAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Expression<Func<TEntity, TReturnProjection>> returnProjection, FindOptions<TEntity, TReturnProjection> options = null);
 		Task<IAsyncCursor<TReturnProjection>> FindAsync<TDerivedEntity, TReturnProjection>(Expression<Func<TDerivedEntity, bool>> filter, Expression<Func<TDerivedEntity, TReturnProjection>> returnProjection, FindOptions<TDerivedEntity, TReturnProjection> options = null) where TDerivedEntity : TEntity;

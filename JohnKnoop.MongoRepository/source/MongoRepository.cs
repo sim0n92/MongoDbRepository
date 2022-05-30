@@ -1119,6 +1119,16 @@ namespace JohnKnoop.MongoRepository
 			return this.MongoCollection.FindAsync(filter, options);
 		}
 
+		public Task<IAsyncCursor<TEntity>> FindAsync(FilterDefinition<TEntity> filter, FindOptions<TEntity, TEntity> options = null)
+		{
+			return this.MongoCollection.FindAsync(filter, options);
+		}
+
+		public Task<long> CountAsync(FilterDefinition<TEntity> filter, CountOptions options = null)
+		{
+			return this.MongoCollection.CountDocumentsAsync(filter, options);
+		}
+
 		public Task<IAsyncCursor<TDerivedEntity>> FindAsync<TDerivedEntity>(
 			Expression<Func<TDerivedEntity, bool>> filter,
 			FindOptions<TDerivedEntity, TDerivedEntity> options = null) where TDerivedEntity : TEntity
@@ -1207,6 +1217,17 @@ namespace JohnKnoop.MongoRepository
 			var cursor = await this.MongoCollection.FindAsync(filter).ConfigureAwait(false);
 
 			return await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
+		}
+
+		public TEntity Get(string objectId)
+		{
+			if (objectId == null) throw new ArgumentNullException(nameof(objectId));
+
+			var filter = new BsonDocument("_id", ObjectId.Parse(objectId));
+
+			var cursor = this.MongoCollection.Find(filter);
+
+			return cursor.FirstOrDefault();
 		}
 
 		public async Task<TDerivedEntity> GetAsync<TDerivedEntity>(string objectId) where TDerivedEntity : TEntity

@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Docker.DotNet" Version="3.125.5" />
-    <PackageReference Include="FluentAssertions" Version="6.6.0" />
+    <PackageReference Include="FluentAssertions" Version="6.7.0" />
     <PackageReference Include="Json.Net" Version="1.0.33" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.2.0" />
     <PackageReference Include="MongoDB.Driver" Version="2.15.1" />
