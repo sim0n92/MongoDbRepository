@@ -21,10 +21,8 @@ namespace JohnKnoop.MongoRepository
 		public DeletedObject(TEntity entity, string sourceCollectionName, DateTime timestampDeletedUtc) : base(entity, timestampDeletedUtc)
 		{
 			SourceCollectionName = sourceCollectionName;
-			TypeName = entity.GetType().Name;
 		}
 
-		public string TypeName { get; private set; }
 		public string SourceCollectionName { get; private set; }
 	}
 
@@ -148,16 +146,17 @@ namespace JohnKnoop.MongoRepository
 			return this.MongoCollection.Aggregate<BsonDocument>(pipeline, options, cancellationToken);
 		}
 
-		public async Task<IList<SoftDeletedEntity>> ListTrashAsync(int? offset = null, int? limit = null)
+		public async Task<IList<SoftDeletedEntity<TEntity>>> ListTrashAsync(int? offset = null, int? limit = null)
 		{
-			var result = await this._trash.Find(x => true)
+			var tName = typeof(TEntity).Name;
+			var result = await this._trash.Find(x => x.TypeName.Equals(tName))
 				.Skip(offset)
 				.Limit(limit)
 				.As<DeletedObject<TEntity>>()
 				.ToListAsync()
 				.ConfigureAwait(false);
 
-			return result.Select(x => new SoftDeletedEntity(x.TypeName, x.SourceCollectionName, x.TimestampDeletedUtc))
+			return result.Select(x => new SoftDeletedEntity<TEntity>(x.Entity, x.TimestampDeletedUtc))
 				.ToList();
 		}
 
@@ -173,7 +172,7 @@ namespace JohnKnoop.MongoRepository
 
 			return SessionContainer.AmbientSession != null
 				? await this.MongoCollection.ReplaceOneAsync(SessionContainer.AmbientSession, filter, entity, new ReplaceOptions { IsUpsert = upsert }).ConfigureAwait(false)
-				: await this.MongoCollection.ReplaceOneAsync(filter, entity, new ReplaceOptions { IsUpsert = upsert }).ConfigureAwait(false);
+				: await this.MongoCollection.ReplaceOneAsync(filter, entity, new ReplaceOptions { IsUpsert = upsert }).ConfigureAwait(false); ;
 		}
 
 		public async Task<ReplaceOneResult> ReplaceOneAsync(Expression<Func<TEntity, bool>> filter, TEntity entity, bool upsert = false)

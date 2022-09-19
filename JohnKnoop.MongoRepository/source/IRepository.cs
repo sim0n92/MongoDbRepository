@@ -16,10 +16,12 @@ namespace JohnKnoop.MongoRepository
 	{
 		internal SoftDeletedEntity(TEntity entity, DateTime timestampDeletedUtc)
 		{
+			TypeName = typeof(TEntity).Name;
 			Entity = entity;
 			TimestampDeletedUtc = timestampDeletedUtc;
 		}
 
+		public string TypeName { get; private set; }
 		public TEntity Entity { get; private set; }
 		public DateTime TimestampDeletedUtc { get; private set; }
 	}
@@ -112,7 +114,7 @@ namespace JohnKnoop.MongoRepository
 
 		Task<TEntity> GetFromTrashAsync(Expression<Func<SoftDeletedEntity<TEntity>, bool>> filter);
 		Task<IList<TEntity>> RestoreSoftDeletedAsync(Expression<Func<SoftDeletedEntity<TEntity>, bool>> filter);
-		Task<IList<SoftDeletedEntity>> ListTrashAsync(int? offset = null, int? limit = null);
+		Task<IList<SoftDeletedEntity<TEntity>>> ListTrashAsync(int? offset = null, int? limit = null);
 
 		Task<TEntity> RestoreSoftDeletedAsync(string objectId);
 		Task<IList<TDerived>> RestoreSoftDeletedAsync<TDerived>(Expression<Func<SoftDeletedEntity<TDerived>, bool>> filter) where TDerived : TEntity;
