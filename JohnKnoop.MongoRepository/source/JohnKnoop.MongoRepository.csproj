@@ -8,7 +8,7 @@
 		<PackageTags>repository mongodb multitenant</PackageTags>
 		<Authors>John Knoop</Authors>
 		<LangVersion>8.0</LangVersion>
-		<PackageReleaseNotes>Bugfixing around enlisting with ambient transactions and async execution flow</PackageReleaseNotes>
+		<PackageReleaseNotes>UpdateOneOrInsertAsync</PackageReleaseNotes>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>$(MainVersion)</Version>
 		<AssemblyVersion>$(MainVersion)</AssemblyVersion>

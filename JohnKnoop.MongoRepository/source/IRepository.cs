@@ -153,6 +153,39 @@ namespace JohnKnoop.MongoRepository
 		Task<TReturnProjection> FindOneAndUpdateAsync<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, Expression<Func<TDerived, TReturnProjection>> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false) where TDerived : TEntity;
 		Task<TReturnProjection> FindOneAndUpdateAsync<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, ProjectionDefinition<TDerived, TReturnProjection> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false) where TDerived : TEntity;
 
+		#region UpdateOrInsertOneAsync
+		/// <summary>
+		/// If the <paramref name="filter"/> matches a document, it will be updated according to the <paramref name="update"/> definition. Otherwise the <paramref name="entityToInsertIfNoMatch"/> will be inserted instead.
+		/// </summary>
+		/// <param name="filter"></param>
+		/// <param name="update">Only root-level properties can be modified, since this method generates a bunch of $setOnInsert, and one property can only be referenced a single time in a MongoDB update definition</param>
+		/// <param name="entityToInsertIfNoMatch">An instance of the entity to insert</param>
+		/// <returns></returns>
+		Task<TEntity> UpdateOrInsertOneAsync(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, TEntity entityToInsertIfNoMatch);
+		/// <summary>
+		/// If the <paramref name="filter"/> matches a document, it will be updated according to the <paramref name="update"/> definition. Otherwise the <paramref name="entityToInsertIfNoMatch"/> will be inserted instead.
+		/// </summary>
+		/// <param name="filter"></param>
+		/// <param name="update">Only root-level properties can be modified, since this method generates a bunch of $setOnInsert, and one property can only be referenced a single time in a MongoDB update definition</param>
+		/// <param name="entityToInsertIfNoMatch">An instance of the entity to insert</param>
+		Task<TReturnProjection> UpdateOrInsertOneAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, TEntity entityToInsertIfNoMatch, Expression<Func<TEntity, TReturnProjection>> returnProjection);
+		/// <summary>
+		/// If the <paramref name="filter"/> matches a document, it will be updated according to the <paramref name="update"/> definition. Otherwise the <paramref name="entityToInsertIfNoMatch"/> will be inserted instead.
+		/// </summary>
+		/// <param name="filter"></param>
+		/// <param name="update">Only root-level properties can be modified, since this method generates a bunch of $setOnInsert, and one property can only be referenced a single time in a MongoDB update definition</param>
+		/// <param name="entityToInsertIfNoMatch">An instance of the entity to insert</param>
+		/// <returns></returns>
+		Task<TDerived> UpdateOrInsertOneAsync<TDerived>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, TDerived entityToInsertIfNoMatch) where TDerived : TEntity;
+		/// <summary>
+		/// If the <paramref name="filter"/> matches a document, it will be updated according to the <paramref name="update"/> definition. Otherwise the <paramref name="entityToInsertIfNoMatch"/> will be inserted instead.
+		/// </summary>
+		/// <param name="filter"></param>
+		/// <param name="update">Only root-level properties can be modified, since this method generates a bunch of $setOnInsert, and one property can only be referenced a single time in a MongoDB update definition</param>
+		/// <param name="entityToInsertIfNoMatch">An instance of the entity to insert</param>
+		Task<TReturnProjection> UpdateOrInsertOneAsync<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, TDerived entityToInsertIfNoMatch, Expression<Func<TDerived, TReturnProjection>> returnProjection) where TDerived : TEntity; 
+		#endregion
+
 		/// <summary>
 		/// Executes multiple update operations in one batch
 		/// </summary>
@@ -200,7 +233,11 @@ namespace JohnKnoop.MongoRepository
 		Task<TReturnProjection> FindOneAndReplaceAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter,  TEntity replacement, ProjectionDefinition<TEntity, TReturnProjection> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false);
 		
 		Task<TReturnProjection> FindOneOrInsertAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, TEntity entity, Expression<Func<TEntity, TReturnProjection>> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate);
-		
+
+		IRepository<TEntity> WithReadPreference(ReadPreference readPreference);
+		IRepository<TEntity> WithReadConcern(ReadConcern readConcern);
+		IRepository<TEntity> WithWriteConcern(WriteConcern writeConcern);
+
 		/// <summary>
 		/// Enlists with the ambient TransactionScope, and fails or succeeds as it fails or succeeds.
 		/// This is useful to be able to put a transactional boundary around MongoDB operations
@@ -210,7 +247,6 @@ namespace JohnKnoop.MongoRepository
 		/// </summary>
 		void EnlistWithCurrentTransactionScope(int maxRetries = default);
 		Transaction StartTransaction(ClientSessionOptions sessionOptions = null, MongoDB.Driver.TransactionOptions transactionOptions = null);
-		IRepository<TEntity> WithReadPreference(ReadPreference readPreference);
 
 		/// <summary>
 		/// Starts a new transaction and executes the provided delegate.
