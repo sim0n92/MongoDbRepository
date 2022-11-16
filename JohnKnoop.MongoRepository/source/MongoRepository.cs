@@ -17,14 +17,56 @@ using MongoDB.Driver.Linq;
 
 namespace JohnKnoop.MongoRepository
 {
-	internal class DeletedObject<TEntity> : SoftDeletedEntity<TEntity>
-	{
-		public DeletedObject(TEntity entity, string sourceCollectionName, DateTime timestampDeletedUtc) : base(entity, timestampDeletedUtc)
+	public class ExpressionGetter<T> : System.Linq.Expressions.ExpressionVisitor
+    {
+		private Expression<T> filter;
+
+		protected override Expression VisitMethodCall(MethodCallExpression node)
 		{
-			SourceCollectionName = sourceCollectionName;
+			if (node.Method.Name == "Where")
+			{
+				var a = node.Arguments[1] as UnaryExpression;
+				try
+				{
+					filter = (Expression<T>)a.Operand;
+				}catch(Exception ex)
+                {
+					int i = 0;
+                }
+
+				return node;
+			}
+			else
+			{
+				return base.VisitMethodCall(node);
+			}
 		}
 
-		public string SourceCollectionName { get; private set; }
+		public Expression<T> GetWhere<TElement>(IQueryable<TElement> queryData)
+		{
+			filter = null;
+
+			this.Visit(queryData.Expression);
+
+			return filter;
+		}
+	}
+
+	public class DeletedObject<TEntity> : SoftDeletedEntity<TEntity>
+	{
+		public DeletedObject(TEntity entity, string sourceCollectionName, DateTime timestampDeletedUtc) : this(entity, sourceCollectionName, timestampDeletedUtc, ObjectId.GenerateNewId())
+        {
+
+        }
+
+        public DeletedObject(TEntity entity, string sourceCollectionName, DateTime timestampDeletedUtc, ObjectId deleteBatchId) : base(entity, timestampDeletedUtc)
+        {
+            SourceCollectionName = sourceCollectionName;
+            DeleteBatchId = deleteBatchId;
+        }
+
+        public string SourceCollectionName { get; private set; }
+		public ObjectId DeleteBatchId { get; private set; }
 	}
 
 	public enum ReturnedDocumentState
@@ -182,6 +224,18 @@ namespace JohnKnoop.MongoRepository
 
 			return result.Select(x => new SoftDeletedEntity<TEntity>(x.Entity, x.TimestampDeletedUtc))
 				.ToList();
+		}
+
+		public IFindFluent<TDerivedEntity, TDerivedEntity> FindInTrash<TDerivedEntity>(
+			FilterDefinition<TDerivedEntity> filter,
+			FindOptions options = null) where TDerivedEntity : SoftDeletedEntity<TEntity>
+		{
+			return this._trash.OfType<TDerivedEntity>().Find(filter, options);
+		}
+
+		public IMongoQueryable<TDerivedEntity> TrashQuery<TDerivedEntity>(AggregateOptions options = null) where TDerivedEntity : SoftDeletedEntity<TEntity>
+		{
+			return this._trash.OfType<TDerivedEntity>().AsQueryable(options);
 		}
 
 		public async Task<ReplaceOneResult> ReplaceOneAsync(string id, TEntity entity, bool upsert = false)
@@ -819,6 +873,40 @@ namespace JohnKnoop.MongoRepository
 			return deletedEntities;
 		}
 
+
+
+		public async Task<IList<TEntity>>  RestoreSoftDeletedAsync<TDerivedEntity>(IMongoQueryable<TDerivedEntity> from) 
+			where TDerivedEntity : SoftDeletedEntity<TEntity>
+        {
+			TryAutoEnlistWithCurrentTransactionScope();
+
+			var deletedObjects = await from.ToListAsync();
+
+			if (deletedObjects.Count == 0)
+			{
+				return new List<TEntity>(0);
+			}
+
+			var deletedEntities = deletedObjects.Select(x => x.Entity).ToList();
+
+			Expression<Func<TDerivedEntity, bool>> filterExpr = (new ExpressionGetter<Func<TDerivedEntity, bool>>()).GetWhere(from);
+
+			ExpressionFilterDefinition<TDerivedEntity> filter = new ExpressionFilterDefinition<TDerivedEntity>(filterExpr);
+
+			var serializerRegistry = BsonSerializer.SerializerRegistry;
+			var documentSerializer = serializerRegistry.GetSerializer<TDerivedEntity>();
+
+			var filterBson = Builders<TDerivedEntity>.Filter.Where(filterExpr).Render(documentSerializer, serializerRegistry);
+
+			await WithTransaction(async session =>
+			{
+				await MongoCollection.InsertManyAsync(session, deletedEntities);
+				await this._trash.DeleteManyAsync(session, filterBson);
+			});
+
+			return deletedEntities;
+		}
+
 		public async Task<IList<TDerived>> RestoreSoftDeletedAsync<TDerived>(Expression<Func<SoftDeletedEntity<TDerived>, bool>> filter) where TDerived : TEntity
 		{
 			if (filter == null) throw new ArgumentNullException(nameof(filter));
@@ -886,7 +974,7 @@ namespace JohnKnoop.MongoRepository
 			}
 		}
 
-		public async Task<DeleteResult> DeleteManyAsync(Expression<Func<TEntity, bool>> filter, bool softDelete = false)
+		public async Task<DeleteResult> DeleteManyAsync(Expression<Func<TEntity, bool>> filter, bool softDelete = false, ObjectId? deleteBatchId = default)
 		{
 			TryAutoEnlistWithCurrentTransactionScope();
 
@@ -896,7 +984,7 @@ namespace JohnKnoop.MongoRepository
 
 				if (objects.Any())
 				{
-					var deletedObjects = objects.Select(x => new DeletedObject<TEntity>(x, this.MongoCollection.CollectionNamespace.CollectionName, DateTime.UtcNow)).ToList();
+					var deletedObjects = objects.Select(x => new DeletedObject<TEntity>(x, this.MongoCollection.CollectionNamespace.CollectionName, DateTime.UtcNow, deleteBatchId ?? ObjectId.GenerateNewId())).ToList();
 					
 					await (SessionContainer.AmbientSession != null
 						? this._trash.InsertManyAsync(SessionContainer.AmbientSession, deletedObjects).ConfigureAwait(false)
@@ -909,7 +997,7 @@ namespace JohnKnoop.MongoRepository
 				: await this.MongoCollection.DeleteManyAsync(filter).ConfigureAwait(false);
 		}
 
-		public async Task<DeleteResult> DeleteManyAsync<TDerived>(Expression<Func<TDerived, bool>> filter, bool softDelete = false) where TDerived : TEntity
+		public async Task<DeleteResult> DeleteManyAsync<TDerived>(Expression<Func<TDerived, bool>> filter, bool softDelete = false, ObjectId? deleteBatchId = default) where TDerived : TEntity
 		{
 			TryAutoEnlistWithCurrentTransactionScope();
 
@@ -925,7 +1013,7 @@ namespace JohnKnoop.MongoRepository
 
 				if (objects.Any())
 				{
-					var deletedObjects = objects.Select(x => new DeletedObject<TEntity>(x, this.MongoCollection.CollectionNamespace.CollectionName, DateTime.UtcNow)).ToList();
+					var deletedObjects = objects.Select(x => new DeletedObject<TEntity>(x, this.MongoCollection.CollectionNamespace.CollectionName, DateTime.UtcNow, deleteBatchId ?? ObjectId.GenerateNewId())).ToList();
 
 					return await WithTransaction(async session =>
 					{
@@ -944,7 +1032,7 @@ namespace JohnKnoop.MongoRepository
 			}
 		}
 
-		public async Task<DeleteResult> DeleteByIdAsync(string objectId, bool softDelete = false)
+		public async Task<DeleteResult> DeleteByIdAsync(string objectId, bool softDelete = false, ObjectId? deleteBatchId = default)
 		{
 			if (objectId == null) throw new ArgumentNullException(nameof(objectId));
 
@@ -963,7 +1051,7 @@ namespace JohnKnoop.MongoRepository
 						throw new Exception($"No document with id {objectId} was found");
 					}
 
-					await this._trash.InsertOneAsync(session, new DeletedObject<TEntity>(entity, this.MongoCollection.CollectionNamespace.CollectionName, DateTime.UtcNow)).ConfigureAwait(false);
+					await this._trash.InsertOneAsync(session, new DeletedObject<TEntity>(entity, this.MongoCollection.CollectionNamespace.CollectionName, DateTime.UtcNow, deleteBatchId ?? ObjectId.GenerateNewId())).ConfigureAwait(false);
 
 					return new SoftDeleteResult(1);
 				});
@@ -1430,7 +1518,7 @@ namespace JohnKnoop.MongoRepository
 
 		#region FindOneAndDelete
 
-		public Task<TEntity> FindOneAndDeleteAsync(string id, bool softDelete = false)
+		public Task<TEntity> FindOneAndDeleteAsync(string id, bool softDelete = false, ObjectId? deleteBatchId = default)
 		{
 			if (id is null)
 			{
@@ -1439,15 +1527,15 @@ namespace JohnKnoop.MongoRepository
 
 			var filter = new BsonDocumentFilterDefinition<TEntity>(new BsonDocument("_id", ObjectId.Parse(id)));
 
-			return FindOneAndDeleteImplAsync(MongoCollection, filter, softDelete);
+			return FindOneAndDeleteImplAsync(MongoCollection, filter, softDelete, deleteBatchId);
 		}
 
-		public Task<TEntity> FindOneAndDeleteAsync(Expression<Func<TEntity, bool>> filter, bool softDelete = false)
+		public Task<TEntity> FindOneAndDeleteAsync(Expression<Func<TEntity, bool>> filter, bool softDelete = false, ObjectId? deleteBatchId = default)
 		{
-			return FindOneAndDeleteImplAsync(MongoCollection, Builders<TEntity>.Filter.Where(filter), softDelete);
+			return FindOneAndDeleteImplAsync(MongoCollection, Builders<TEntity>.Filter.Where(filter), softDelete, deleteBatchId);
 		}
 
-		private async Task<TDerived> FindOneAndDeleteImplAsync<TDerived>(IMongoCollection<TDerived> collection, FilterDefinition<TDerived> filter, bool softDelete = false) where TDerived : TEntity
+		private async Task<TDerived> FindOneAndDeleteImplAsync<TDerived>(IMongoCollection<TDerived> collection, FilterDefinition<TDerived> filter, bool softDelete = false, ObjectId? deleteBatchId = default) where TDerived : TEntity
 		{
 			TryAutoEnlistWithCurrentTransactionScope();
 
@@ -1462,7 +1550,7 @@ namespace JohnKnoop.MongoRepository
 						return default;
 					}
 
-					await this._trash.InsertOneAsync(session, new DeletedObject<TEntity>(entity, this.MongoCollection.CollectionNamespace.CollectionName, DateTime.UtcNow)).ConfigureAwait(false);
+					await this._trash.InsertOneAsync(session, new DeletedObject<TEntity>(entity, this.MongoCollection.CollectionNamespace.CollectionName, DateTime.UtcNow, deleteBatchId ?? ObjectId.GenerateNewId())).ConfigureAwait(false);
 
 					return entity;
 				});
@@ -1475,7 +1563,7 @@ namespace JohnKnoop.MongoRepository
 			}
 		}
 
-		public Task<TDerivedEntity> FindOneAndDeleteAsync<TDerivedEntity>(string id, bool softDelete = false) where TDerivedEntity : TEntity
+		public Task<TDerivedEntity> FindOneAndDeleteAsync<TDerivedEntity>(string id, bool softDelete = false, ObjectId? deleteBatchId = default) where TDerivedEntity : TEntity
 		{
 			if (id is null)
 			{
@@ -1484,12 +1572,12 @@ namespace JohnKnoop.MongoRepository
 
 			var filter = new BsonDocumentFilterDefinition<TDerivedEntity>(new BsonDocument("_id", ObjectId.Parse(id)));
 
-			return FindOneAndDeleteImplAsync(MongoCollection.OfType<TDerivedEntity>(), filter, softDelete);
+			return FindOneAndDeleteImplAsync(MongoCollection.OfType<TDerivedEntity>(), filter, softDelete, deleteBatchId);
 		}
 
-		public Task<TDerivedEntity> FindOneAndDeleteAsync<TDerivedEntity>(Expression<Func<TDerivedEntity, bool>> filter, bool softDelete = false) where TDerivedEntity : TEntity
+		public Task<TDerivedEntity> FindOneAndDeleteAsync<TDerivedEntity>(Expression<Func<TDerivedEntity, bool>> filter, bool softDelete = false, ObjectId? deleteBatchId = default) where TDerivedEntity : TEntity
 		{
-			return FindOneAndDeleteImplAsync(MongoCollection.OfType<TDerivedEntity>(), Builders<TDerivedEntity>.Filter.Where(filter), softDelete);
+			return FindOneAndDeleteImplAsync(MongoCollection.OfType<TDerivedEntity>(), Builders<TDerivedEntity>.Filter.Where(filter), softDelete, deleteBatchId);
 		}
 
 		#endregion

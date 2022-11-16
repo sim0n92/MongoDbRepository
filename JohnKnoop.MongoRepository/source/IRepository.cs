@@ -26,20 +26,7 @@ namespace JohnKnoop.MongoRepository
 		public DateTime TimestampDeletedUtc { get; private set; }
 	}
 
-	public class SoftDeletedEntity
-	{
-		public SoftDeletedEntity(string typeName, string sourceCollectionName, DateTime timestampDeletedUtc)
-		{
-			TypeName = typeName;
-			SourceCollectionName = sourceCollectionName;
-			TimestampDeletedUtc = timestampDeletedUtc;
-		}
-
-		public string TypeName { get; private set; }
-		public string SourceCollectionName { get; private set; }
-		public DateTime TimestampDeletedUtc { get; private set; }
-	}
-
+	
 	public interface IRepository<TEntity>
 	{
 		Task EnsureIndexesAndCap();
@@ -102,19 +89,25 @@ namespace JohnKnoop.MongoRepository
 
 		Task DeletePropertyAsync(Expression<Func<TEntity, bool>> filter, Expression<Func<TEntity, object>> propertyExpression);
 
-		Task<DeleteResult> DeleteByIdAsync(string id, bool softDelete = false);
-		Task<DeleteResult> DeleteManyAsync(Expression<Func<TEntity, bool>> filter, bool softDelete = false);
-		Task<DeleteResult> DeleteManyAsync<TDerived>(Expression<Func<TDerived, bool>> filter, bool softDelete = false) where TDerived : TEntity;
+		Task<DeleteResult> DeleteByIdAsync(string id, bool softDelete = false, ObjectId? deleteBatchId = default);
+		Task<DeleteResult> DeleteManyAsync(Expression<Func<TEntity, bool>> filter, bool softDelete = false, ObjectId? deleteBatchId = default);
+		Task<DeleteResult> DeleteManyAsync<TDerived>(Expression<Func<TDerived, bool>> filter, bool softDelete = false, ObjectId? deleteBatchId = default) where TDerived : TEntity;
 
-		Task<TEntity> FindOneAndDeleteAsync(string id, bool softDelete = false);
-		Task<TEntity> FindOneAndDeleteAsync(Expression<Func<TEntity, bool>> filter, bool softDelete = false);
+		Task<TEntity> FindOneAndDeleteAsync(string id, bool softDelete = false, ObjectId? deleteBatchId = default);
+		Task<TEntity> FindOneAndDeleteAsync(Expression<Func<TEntity, bool>> filter, bool softDelete = false, ObjectId? deleteBatchId = default);
 
-		Task<TDerivedEntity> FindOneAndDeleteAsync<TDerivedEntity>(string id, bool softDelete = false) where TDerivedEntity : TEntity;
-		Task<TDerivedEntity> FindOneAndDeleteAsync<TDerivedEntity>(Expression<Func<TDerivedEntity, bool>> filter, bool softDelete = false) where TDerivedEntity : TEntity;
+		Task<TDerivedEntity> FindOneAndDeleteAsync<TDerivedEntity>(string id, bool softDelete = false, ObjectId? deleteBatchId = default) where TDerivedEntity : TEntity;
+		Task<TDerivedEntity> FindOneAndDeleteAsync<TDerivedEntity>(Expression<Func<TDerivedEntity, bool>> filter, bool softDelete = false, ObjectId? deleteBatchId = default) where TDerivedEntity : TEntity;
 
 		Task<TEntity> GetFromTrashAsync(Expression<Func<SoftDeletedEntity<TEntity>, bool>> filter);
 		Task<IList<TEntity>> RestoreSoftDeletedAsync(Expression<Func<SoftDeletedEntity<TEntity>, bool>> filter);
 		Task<IList<SoftDeletedEntity<TEntity>>> ListTrashAsync(int? offset = null, int? limit = null);
+		IFindFluent<TDerivedEntity, TDerivedEntity> FindInTrash<TDerivedEntity>(FilterDefinition<TDerivedEntity> filter, FindOptions options = null)
+			where TDerivedEntity : SoftDeletedEntity<TEntity>;
+
+		IMongoQueryable<TDerivedEntity> TrashQuery<TDerivedEntity>(AggregateOptions options = null) where TDerivedEntity : SoftDeletedEntity<TEntity>;
+
+		Task<IList<TEntity>> RestoreSoftDeletedAsync<TDerivedEntity>(IMongoQueryable<TDerivedEntity> from) where TDerivedEntity : SoftDeletedEntity<TEntity>;
 
 		Task<TEntity> RestoreSoftDeletedAsync(string objectId);
 		Task<IList<TDerived>> RestoreSoftDeletedAsync<TDerived>(Expression<Func<SoftDeletedEntity<TDerived>, bool>> filter) where TDerived : TEntity;
