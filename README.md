@@ -1,46 +1,16 @@
 # JohnKnoop.MongoRepository
 
-An easy-to-configure, powerful repository for MongoDB with support for multi-tenancy
+An easy-to-configure extension to the MongoDB driver, adding support for: \
+\
+✔️ Multi-tenancy \
+✔️ Simplified transaction handling, including support for [TransactionScope](#transactions) \
+✔️ [Soft-deletes](#soft-deleting)
 
+## Install via NuGet
 
-- [Getting started](#getting-started)
-- [Querying](#querying)
-    - [Get by id](#get-by-id)
-        - [Projection](#get-by-id)
-    - [Find by expression](#find-by-expression)
-        - [Count, Sort, Skip, Limit, Project, Cursor](#find-by-expression)
-    - [LINQ](#linq)
-- [Inserting, updating and deleting](#inserting-updating-and-deleting)
-    - [InsertAsync, InsertManyAsync](#insertasync-insertmanyasync)
-    - [UpdateOneAsync, UpdateManyAsync](#updateoneasync-Updatemanyasync)
-    - [UpdateOneBulkAsync](#updateonebulkasync)
-    - [FindOneAndUpdateAsync](#FindOneAndUpdateasync),
-    - [FindOneAndReplaceAsync](documentation under construction),
-    - [FindOneOrInsertAsync](documentation under construction),
-    - [Aggregation](#aggregation)
-    - [Deleting](#deleting)
-        - [Soft-deletes](#soft-deleting)
-    - [Transactions](#transactions)
-- [Advanced features](#advanced-features)
-    - [Counters](#counters)
-    - [Deleting properties](#deleting-properties)
-- Configuration
-    - [Multi-tenancy](#multi-tenancy)
-    - [Polymorphism](#polymorphism)
-    - [Indices](#indices)
-    - [Capped collections](#capped-collections)
-    - [Unconventional id properties](#unconventional-id-properties)
-    - [DI frameworks](#di-frameworks)
-        - [Ninject](#ninject)
-        - [.Net Core](#net-core)
-- Contribute
-    - [Design philosophy](#design-philosophy)
+    Install-Package JohnKnoop.MongoRepository
 
-## Getting started
-
-    PM> Install-Package JohnKnoop.MongoRepository
-
-### Configure mappings, indices, multitenancy etc with a few lines of code...
+### Configure mappings, indices, multitenancy etc with a few lines of code:
 
 ```csharp
 MongoRepository.Configure()
@@ -64,6 +34,45 @@ MongoRepository.Configure()
 var employeeRepository = mongoClient.GetRepository<Employee>();
 var animalRepository = mongoClient.GetRepository<Animal>(tenantKey);
 ```
+
+In the real world you'd typically resolve `IRepository<T>` through your dependency resolution system. See the section about [DI frameworks](#di-frameworks) for more info.
+
+## Getting started
+
+- [Querying](#querying)
+    - [Get by id](#get-by-id)
+        - [Projection](#get-by-id)
+    - [Find by expression](#find-by-expression)
+        - [Count, Sort, Skip, Limit, Project, Cursor](#find-by-expression)
+    - [LINQ](#linq)
+- [Inserting, updating and deleting](#inserting-updating-and-deleting)
+    - [InsertAsync, InsertManyAsync](#insertasync-insertmanyasync)
+    - [UpdateOneAsync, UpdateManyAsync](#updateoneasync-Updatemanyasync)
+    - [UpdateOneBulkAsync](#updateonebulkasync)
+    - [FindOneAndUpdateAsync](#FindOneAndUpdateasync)
+    - [FindOneAndReplaceAsync](documentation under construction)
+    - [FindOneOrInsertAsync](documentation under construction)
+    - [UpdateOrInsertOneAsync](#UpdateOrInsertOneAsync)
+    - [Aggregation](#aggregation)
+    - [Deleting](#deleting)
+        - [Soft-deletes](#soft-deleting)
+    - [Transactions](#transactions)
+    - [UnionWith](#unionwith)
+- [Advanced features](#advanced-features)
+    - [Counters](#counters)
+    - [Deleting properties](#deleting-properties)
+- Configuration
+    - [Multi-tenancy](#multi-tenancy)
+    - [Polymorphism](#polymorphism)
+    - [Indices](#indices)
+    - [Capped collections](#capped-collections)
+    - [Unconventional id properties](#unconventional-id-properties)
+    - [DI frameworks](#di-frameworks)
+        - [Ninject](#ninject)
+        - [.Net Core](#net-core)
+- Contribute
+    - [Design philosophy](#design-philosophy)
+
 
 ## Querying
 
@@ -166,6 +175,13 @@ var entityAfterUpdate = await repository.FindOneAndUpdateAsync(
     upsert: true
 );
 ```
+
+### UpdateOrInsertOneAsync
+Let's you upsert a document of type `T` using an instance of type `T` as default and then apply updates on top of that, in an atomic operation. If the filter is matched, the default instance will not be used, and only the updates will be applied.
+
+The same result can be achieved with common UpdateOne/FindOneAndUpdate using `upsert` and a bunch of `SetOnInsert`s, but the advantage of `UpdateOrInsertOneAsync` is you don't have to add a `SetOnInsert` for each property manually.
+
+
 ### Aggregation
 ```csharp
 repository.Aggregate();
@@ -242,6 +258,32 @@ await repo.WithTransactionAsync(async () =>
 ```
 
 `RetryAsync` also comes with an overload that takes a number representing the max number of retries.
+
+### UnionWith
+
+This library provides an extension method to `IAggregateFluent<T>` called `UnionWith` that accepts a repository and a projection expression.
+
+```cs
+using JohnKnoop.MongoRepository.Extensions;
+
+var allContacts = await soccerPlayersRepository
+    .Aggregate()
+    .Project(x => new
+    {
+        PlayerName = x.SoccerPlayerName,
+        TeamName = x.SoccerTeamName
+    })
+    .UnionWith(
+        rugbyPlayersRepository,
+        x => new
+        {
+            PlayerName = x.RugbyPlayerName,
+            TeamName = x.RugbyTeamName
+        }
+    )
+    .SortBy(x => x.PlayerName)
+    .ToListAsync();
+```
 
 ## Advanced features
 

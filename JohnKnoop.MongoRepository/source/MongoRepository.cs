@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
@@ -21,10 +22,8 @@ namespace JohnKnoop.MongoRepository
 		public DeletedObject(TEntity entity, string sourceCollectionName, DateTime timestampDeletedUtc) : base(entity, timestampDeletedUtc)
 		{
 			SourceCollectionName = sourceCollectionName;
-			TypeName = entity.GetType().Name;
 		}
 
-		public string TypeName { get; private set; }
 		public string SourceCollectionName { get; private set; }
 	}
 
@@ -36,7 +35,7 @@ namespace JohnKnoop.MongoRepository
 
 	public static class MongoRepository
 	{
-		private static object _lock = new object();
+		private static CriticalSection _cs = new CriticalSection();
 		private static bool _EnsureCollectionsCreated_Called = false;
 
 		public static MongoConfigurationBuilder Configure()
@@ -52,7 +51,7 @@ namespace JohnKnoop.MongoRepository
 		internal static void EnsureCollectionsCreated(IMongoClient mongoClient, string tenantKey = null)
 		{
 			// this ww will relax allot, we will call it only first time !!! in Fenix world it is not necessary more then one time !!!
-			lock (_lock)
+			using (var _lock = _cs.Lock(TimeSpan.FromMilliseconds(-1)))
 			{
 				if (!_EnsureCollectionsCreated_Called)
 				{
@@ -83,6 +82,8 @@ namespace JohnKnoop.MongoRepository
 		/// </summary>
 		private readonly string _tenantKey;
 
+		internal IMongoCollection<TEntity> Collection => this.MongoCollection;
+
 		internal MongoRepository(IMongoCollection<TEntity> mongoCollection, IMongoCollection<SoftDeletedEntity<TEntity>> trash, string tenantKey, bool autoEnlistWithCurrentTransactionScope = false)
 		{
 			this.MongoCollection = mongoCollection;
@@ -93,8 +94,29 @@ namespace JohnKnoop.MongoRepository
 
 		public IRepository<TEntity> WithReadPreference(ReadPreference readPreference)
 		{
-			this.MongoCollection = this.MongoCollection.WithReadPreference(readPreference);
-			return this;
+			return new MongoRepository<TEntity>(
+				mongoCollection: this.MongoCollection.WithReadPreference(readPreference),
+				trash: _trash.WithReadPreference(readPreference),
+				tenantKey: _tenantKey,
+				autoEnlistWithCurrentTransactionScope: _autoEnlistWithCurrentTransactionScope);
+		}
+
+		public IRepository<TEntity> WithReadConcern(ReadConcern readConcern)
+		{
+			return new MongoRepository<TEntity>(
+				mongoCollection: this.MongoCollection.WithReadConcern(readConcern),
+				trash: _trash.WithReadConcern(readConcern),
+				tenantKey: _tenantKey,
+				autoEnlistWithCurrentTransactionScope: _autoEnlistWithCurrentTransactionScope);
+		}
+
+		public IRepository<TEntity> WithWriteConcern(WriteConcern writeConcern)
+		{
+			return new MongoRepository<TEntity>(
+				mongoCollection: this.MongoCollection.WithWriteConcern(writeConcern),
+				trash: _trash.WithWriteConcern(writeConcern),
+				tenantKey: _tenantKey,
+				autoEnlistWithCurrentTransactionScope: _autoEnlistWithCurrentTransactionScope);
 		}
 
 		public async Task DeletePropertyAsync(Expression<Func<TEntity, bool>> filterExpression, Expression<Func<TEntity, object>> propertyExpression)
@@ -148,16 +170,17 @@ namespace JohnKnoop.MongoRepository
 			return this.MongoCollection.Aggregate<BsonDocument>(pipeline, options, cancellationToken);
 		}
 
-		public async Task<IList<SoftDeletedEntity>> ListTrashAsync(int? offset = null, int? limit = null)
+		public async Task<IList<SoftDeletedEntity<TEntity>>> ListTrashAsync(int? offset = null, int? limit = null)
 		{
-			var result = await this._trash.Find(x => true)
+			var tName = typeof(TEntity).Name;
+			var result = await this._trash.Find(x => x.TypeName.Equals(tName))
 				.Skip(offset)
 				.Limit(limit)
 				.As<DeletedObject<TEntity>>()
 				.ToListAsync()
 				.ConfigureAwait(false);
 
-			return result.Select(x => new SoftDeletedEntity(x.TypeName, x.SourceCollectionName, x.TimestampDeletedUtc))
+			return result.Select(x => new SoftDeletedEntity<TEntity>(x.Entity, x.TimestampDeletedUtc))
 				.ToList();
 		}
 
@@ -173,7 +196,7 @@ namespace JohnKnoop.MongoRepository
 
 			return SessionContainer.AmbientSession != null
 				? await this.MongoCollection.ReplaceOneAsync(SessionContainer.AmbientSession, filter, entity, new ReplaceOptions { IsUpsert = upsert }).ConfigureAwait(false)
-				: await this.MongoCollection.ReplaceOneAsync(filter, entity, new ReplaceOptions { IsUpsert = upsert }).ConfigureAwait(false);
+				: await this.MongoCollection.ReplaceOneAsync(filter, entity, new ReplaceOptions { IsUpsert = upsert }).ConfigureAwait(false); ;
 		}
 
 		public async Task<ReplaceOneResult> ReplaceOneAsync(Expression<Func<TEntity, bool>> filter, TEntity entity, bool upsert = false)
@@ -189,10 +212,30 @@ namespace JohnKnoop.MongoRepository
 
 		public Task<TReturnProjection> FindOneAndUpdateAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, Expression<Func<TEntity, TReturnProjection>> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.BeforeUpdate, bool upsert = false)
 		{
-			return FindOneAndUpdateAsync<TReturnProjection>(filter, update, Builders<TEntity>.Projection.Expression(returnProjection), returnedDocumentState, upsert);
+			return FindOneAndUpdateAsyncImpl<TReturnProjection>(filter, update(Builders<TEntity>.Update), Builders<TEntity>.Projection.Expression(returnProjection), returnedDocumentState, upsert);
 		}
 
-		public async Task<TReturnProjection> FindOneAndUpdateAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, ProjectionDefinition<TEntity, TReturnProjection> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false)
+		public Task<TReturnProjection> FindOneAndUpdateAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, UpdateDefinition<TEntity>update, Expression<Func<TEntity, TReturnProjection>> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false)
+		{
+			return FindOneAndUpdateAsyncImpl(filter, update, Builders<TEntity>.Projection.Expression(returnProjection), returnedDocumentState, upsert);
+		}
+
+		public Task<TReturnProjection> FindOneAndUpdateAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> update, ProjectionDefinition<TEntity, TReturnProjection> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false)
+		{
+			return FindOneAndUpdateAsyncImpl(filter, update(Builders<TEntity>.Update), returnProjection, returnedDocumentState, upsert);
+		}
+
+		public Task<TReturnProjection> FindOneAndUpdateAsync<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, Expression<Func<TDerived, TReturnProjection>> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false) where TDerived : TEntity
+		{
+			return FindOneAndUpdateDerivedAsyncImpl(filter, update(Builders<TDerived>.Update), Builders<TDerived>.Projection.Expression(returnProjection), returnedDocumentState, upsert);
+		}
+
+		public Task<TReturnProjection> FindOneAndUpdateAsync<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, UpdateDefinition<TDerived> update, Expression<Func<TDerived, TReturnProjection>> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false) where TDerived : TEntity
+		{
+			return FindOneAndUpdateDerivedAsyncImpl(filter, update, Builders<TDerived>.Projection.Expression(returnProjection), returnedDocumentState, upsert);
+		}
+
+		private async Task<TReturnProjection> FindOneAndUpdateAsyncImpl<TReturnProjection>(Expression<Func<TEntity, bool>> filter, UpdateDefinition<TEntity> update, ProjectionDefinition<TEntity, TReturnProjection> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false)
 		{
 			TryAutoEnlistWithCurrentTransactionScope();
 
@@ -206,7 +249,7 @@ namespace JohnKnoop.MongoRepository
 				? await this.MongoCollection.FindOneAndUpdateAsync(
 					SessionContainer.AmbientSession,
 					filter,
-					update(Builders<TEntity>.Update),
+					update,
 					new FindOneAndUpdateOptions<TEntity, TReturnProjection>
 					{
 						Projection = returnProjection,
@@ -215,7 +258,7 @@ namespace JohnKnoop.MongoRepository
 					}).ConfigureAwait(false)
 			: await this.MongoCollection.FindOneAndUpdateAsync(
 					filter,
-					update(Builders<TEntity>.Update),
+					update,
 					new FindOneAndUpdateOptions<TEntity, TReturnProjection>
 					{
 						Projection = returnProjection,
@@ -224,13 +267,12 @@ namespace JohnKnoop.MongoRepository
 					}).ConfigureAwait(false);
 		}
 
-		
-		public Task<TReturnProjection> FindOneAndUpdateAsync<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, Expression<Func<TDerived, TReturnProjection>> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false) where TDerived : TEntity
+		public Task<TReturnProjection> FindOneAndUpdateAsync<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, ProjectionDefinition<TDerived, TReturnProjection> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false) where TDerived : TEntity
 		{
-			return FindOneAndUpdateAsync(filter, update, Builders<TDerived>.Projection.Expression(returnProjection), returnedDocumentState, upsert);
+			return FindOneAndUpdateDerivedAsyncImpl(filter, update(Builders<TDerived>.Update), returnProjection, returnedDocumentState, upsert);
 		}
 
-		public async Task<TReturnProjection> FindOneAndUpdateAsync<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> update, ProjectionDefinition<TDerived, TReturnProjection> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false) where TDerived : TEntity
+		private async Task<TReturnProjection> FindOneAndUpdateDerivedAsyncImpl<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, UpdateDefinition<TDerived> update, ProjectionDefinition<TDerived, TReturnProjection> returnProjection, ReturnedDocumentState returnedDocumentState = ReturnedDocumentState.AfterUpdate, bool upsert = false) where TDerived : TEntity
 		{
 			TryAutoEnlistWithCurrentTransactionScope();
 
@@ -244,7 +286,7 @@ namespace JohnKnoop.MongoRepository
 				? await this.MongoCollection.OfType<TDerived>().FindOneAndUpdateAsync(
 					SessionContainer.AmbientSession,
 					filter,
-					update(Builders<TDerived>.Update),
+					update,
 					new FindOneAndUpdateOptions<TDerived, TReturnProjection>
 					{
 						Projection = returnProjection,
@@ -253,7 +295,7 @@ namespace JohnKnoop.MongoRepository
 					}).ConfigureAwait(false)
 				: await this.MongoCollection.OfType<TDerived>().FindOneAndUpdateAsync(
 					filter,
-					update(Builders<TDerived>.Update),
+					update,
 					new FindOneAndUpdateOptions<TDerived, TReturnProjection>
 					{
 						Projection = returnProjection,
@@ -1119,6 +1161,16 @@ namespace JohnKnoop.MongoRepository
 			return this.MongoCollection.FindAsync(filter, options);
 		}
 
+		public Task<IAsyncCursor<TEntity>> FindAsync(FilterDefinition<TEntity> filter, FindOptions<TEntity, TEntity> options = null)
+		{
+			return this.MongoCollection.FindAsync(filter, options);
+		}
+
+		public Task<long> CountAsync(FilterDefinition<TEntity> filter, CountOptions options = null)
+		{
+			return this.MongoCollection.CountDocumentsAsync(filter, options);
+		}
+
 		public Task<IAsyncCursor<TDerivedEntity>> FindAsync<TDerivedEntity>(
 			Expression<Func<TDerivedEntity, bool>> filter,
 			FindOptions<TDerivedEntity, TDerivedEntity> options = null) where TDerivedEntity : TEntity
@@ -1207,6 +1259,17 @@ namespace JohnKnoop.MongoRepository
 			var cursor = await this.MongoCollection.FindAsync(filter).ConfigureAwait(false);
 
 			return await cursor.FirstOrDefaultAsync().ConfigureAwait(false);
+		}
+
+		public TEntity Get(string objectId)
+		{
+			if (objectId == null) throw new ArgumentNullException(nameof(objectId));
+
+			var filter = new BsonDocument("_id", ObjectId.Parse(objectId));
+
+			var cursor = this.MongoCollection.Find(filter);
+
+			return cursor.FirstOrDefault();
 		}
 
 		public async Task<TDerivedEntity> GetAsync<TDerivedEntity>(string objectId) where TDerivedEntity : TEntity
@@ -1430,6 +1493,96 @@ namespace JohnKnoop.MongoRepository
 		}
 
 		#endregion
+
+		public Task<TReturnProjection> UpdateOrInsertOneAsync<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> updateExpression, TEntity entityToInsertIfNoMatch, Expression<Func<TEntity, TReturnProjection>> returnProjection)
+		{
+			return UpdateOrInsertOneAsyncImpl<TReturnProjection>(filter, updateExpression, entityToInsertIfNoMatch, returnProjection);
+		}
+
+		public Task<TReturnProjection> UpdateOrInsertOneAsync<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> updateExpression, TDerived entityToInsertIfNoMatch, Expression<Func<TDerived, TReturnProjection>> returnProjection) where TDerived : TEntity
+		{
+			return UpdateOrInsertDerivedOneAsyncImpl<TDerived, TReturnProjection>(filter, updateExpression, entityToInsertIfNoMatch, returnProjection);
+		}
+
+		public Task<TEntity> UpdateOrInsertOneAsync(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> updateExpression, TEntity entityToInsertIfNoMatch)
+		{
+			return UpdateOrInsertOneAsyncImpl<TEntity>(filter, updateExpression, entityToInsertIfNoMatch, x => x);
+		}
+
+		public Task<TDerived> UpdateOrInsertOneAsync<TDerived>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> updateExpression, TDerived entityToInsertIfNoMatch) where TDerived : TEntity
+		{
+			return UpdateOrInsertDerivedOneAsyncImpl<TDerived, TDerived>(filter, updateExpression, entityToInsertIfNoMatch, x => x);
+		}
+
+		private async Task<TReturnProjection> UpdateOrInsertOneAsyncImpl<TReturnProjection>(Expression<Func<TEntity, bool>> filter, Func<UpdateDefinitionBuilder<TEntity>, UpdateDefinition<TEntity>> updateExpression, TEntity entityToInsertIfNoMatch, Expression<Func<TEntity, TReturnProjection>> returnProjection)
+		{
+			BsonDocument doc = entityToInsertIfNoMatch.ToBsonDocument();
+
+			var patch = updateExpression(Builders<TEntity>.Update);
+
+			var patchedPropertyNames = patch.Render(
+				   BsonSerializer.SerializerRegistry.GetSerializer<TEntity>(),
+				   BsonSerializer.SerializerRegistry
+				)
+				.AsBsonDocument.Select(x => x.Value.AsBsonDocument).SelectMany(prop => prop.Select(p => p.Name)).ToList();
+
+			var update = Builders<TEntity>.Update
+					.Combine(doc
+						.Where(x => !patchedPropertyNames.Contains(x.Name))
+							.Select(x => Builders<TEntity>.Update.SetOnInsert(x.Name, x.Value))
+						.Append(patch)
+					);
+
+			try
+			{
+				return await this.FindOneAndUpdateAsync<TReturnProjection>(
+					filter,
+					update,
+					returnProjection,
+					ReturnedDocumentState.AfterUpdate,
+					true
+					);
+			}
+			catch (MongoDB.Driver.MongoCommandException ex) when (ex.CodeName == "ConflictingUpdateOperators")
+			{
+				throw new NotSupportedException("Only root-level properties can be patched. See issue #54", ex);
+			}
+		}
+
+		private async Task<TReturnProjection> UpdateOrInsertDerivedOneAsyncImpl<TDerived, TReturnProjection>(Expression<Func<TDerived, bool>> filter, Func<UpdateDefinitionBuilder<TDerived>, UpdateDefinition<TDerived>> updateExpression, TDerived entityToInsertIfNoMatch, Expression<Func<TDerived, TReturnProjection>> returnProjection) where TDerived : TEntity
+		{
+			BsonDocument doc = entityToInsertIfNoMatch.ToBsonDocument();
+
+			var patch = updateExpression(Builders<TDerived>.Update);
+
+			var patchedPropertyNames = patch.Render(
+				   BsonSerializer.SerializerRegistry.GetSerializer<TDerived>(),
+				   BsonSerializer.SerializerRegistry
+				)
+				.AsBsonDocument.Select(x => x.Value.AsBsonDocument).SelectMany(prop => prop.Select(p => p.Name)).ToList();
+
+			var update = Builders<TDerived>.Update
+					.Combine(doc
+						.Where(x => !patchedPropertyNames.Contains(x.Name))
+							.Select(x => Builders<TDerived>.Update.SetOnInsert(x.Name, x.Value))
+						.Append(patch)
+					);
+
+			try
+			{
+				return await this.FindOneAndUpdateAsync<TDerived, TReturnProjection>(
+					filter,
+					update,
+					returnProjection,
+					ReturnedDocumentState.AfterUpdate,
+					true
+					);
+			}
+			catch (MongoDB.Driver.MongoCommandException ex) when (ex.CodeName == "ConflictingUpdateOperators")
+			{
+				throw new NotSupportedException("Only root-level properties can be patched. See issue #54", ex);
+			}
+		}
 	}
 
 	public class NoBulkWriteResult<T> : BulkWriteResult<T>
