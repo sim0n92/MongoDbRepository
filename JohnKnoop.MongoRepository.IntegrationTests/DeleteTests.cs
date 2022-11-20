@@ -11,7 +11,7 @@ using Xunit;
 
 namespace JohnKnoop.MongoRepository.IntegrationTests
 {
-	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
+	[Collection("IntegrationTests")]
 	public class DeleteTests : IClassFixture<LaunchSettingsFixture>
 	{
 		private const string DbName = "TestDb";

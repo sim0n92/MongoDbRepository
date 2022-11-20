@@ -11,8 +11,8 @@ using Xunit;
 
 namespace JohnKnoop.MongoRepository.IntegrationTests
 {
-	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
-    public class FindOneAndUpdateTests : IClassFixture<LaunchSettingsFixture>
+	[Collection("IntegrationTests")]
+	public class FindOneAndUpdateTests : IClassFixture<LaunchSettingsFixture>
     {
 		private const string DbName = "TestDb";
 		private const string CollectionName = "MyEntities";
