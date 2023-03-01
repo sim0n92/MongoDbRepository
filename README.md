@@ -58,6 +58,7 @@ In the real world you'd typically resolve `IRepository<T>` through your dependen
         - [Soft-deletes](#soft-deleting)
     - [Transactions](#transactions)
     - [UnionWith](#unionwith)
+    - [ArrayFilters helpers](#arrayfilters-helpers)
 - [Advanced features](#advanced-features)
     - [Counters](#counters)
     - [Deleting properties](#deleting-properties)
@@ -177,7 +178,7 @@ var entityAfterUpdate = await repository.FindOneAndUpdateAsync(
 ```
 
 ### UpdateOrInsertOneAsync
-Let's you upsert a document of type `T` using an instance of type `T` as default and then apply updates on top of that, in an atomic operation. If the filter is matched, the default instance will not be used, and only the updates will be applied.
+Lets you upsert a document of type `T` using an instance of type `T` as default and then apply updates on top of that, in an atomic operation. If the filter is matched, the default instance will not be used, and only the updates will be applied.
 
 The same result can be achieved with common UpdateOne/FindOneAndUpdate using `upsert` and a bunch of `SetOnInsert`s, but the advantage of `UpdateOrInsertOneAsync` is you don't have to add a `SetOnInsert` for each property manually.
 
@@ -284,6 +285,52 @@ var allContacts = await soccerPlayersRepository
     .SortBy(x => x.PlayerName)
     .ToListAsync();
 ```
+
+### ArrayFilters helpers
+
+Working with [ArrayFilters](https://www.mongodb.com/docs/manual/reference/operator/update/positional-filtered/) using the MongoDB C# driver is an unpleasant experience in that it doesn't provide any compile-time checking. This library contains a few handy helpers that lets you replace this code:
+
+```cs
+await _repository.UpdateOneAsync(
+    filter: x => x.Title == "Game of Thrones",
+    update: x => x.Set(
+        "Seasons.$[a].Episodes.$[b].Title",
+        "Qarth"
+    ),
+    options: new UpdateOptions
+    {
+        ArrayFilters = new List<ArrayFilterDefinition<Show>>
+        {
+            new BsonDocument("a.Year", new BsonDocument("$ne", "2013")),
+            new BsonDocument("b.Number", 2),
+        }
+    }
+);
+```
+...with this:
+```cs
+await _repository.UpdateOneAsync(
+    filter: x => x.Title == "Game of Thrones",
+    update: x => x.Set(
+        ArrayFilters.CreateArrayFilterPath<Show>()
+            .SelectEnumerable(x => x.Seasons, "a")
+            .SelectEnumerable(x => x.Episodes, "b")
+            .SelectProperty(x => x.Title)
+            .Build(),
+        "Qarth"
+    ),
+    options: new UpdateOptions
+    {
+        ArrayFilters = ArrayFilters.DefineFilters<Show>()
+            .AddFilter("a", show => show.Seasons, f => f.Eq(x => x.Year, "2013"))
+            .ThenAddFilter("b", season => season.Episodes, f => f.Eq(x => x.Number, 2))
+    }
+);
+```
+
+This ensures already at design-time that you haven't misspelled any properties, or that you're using the wrong data type for any values.
+
+Please note that this feature is still experimental.
 
 ## Advanced features
 
