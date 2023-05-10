@@ -150,8 +150,8 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		public string OtherProtected { get; protected set; } = "";
 	}
 
-	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
-    public class InsertAndFindOneSpeedTests : IClassFixture<LaunchSettingsFixture>
+	[Collection("IntegrationTests")]
+	public class InsertAndFindOneSpeedTests : IClassFixture<LaunchSettingsFixture>
     {
 		private const string DbName = "TestDb";
 		private const string CollectionName = "FileGroups";

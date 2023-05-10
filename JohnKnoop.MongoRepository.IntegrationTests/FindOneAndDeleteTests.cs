@@ -36,8 +36,8 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		public int Age { get; private set; }
 	}
 
-    [CollectionDefinition("IntegrationTests", DisableParallelization = true)]
-    public class FindOneAndDeleteTests : IClassFixture<LaunchSettingsFixture>
+	[Collection("IntegrationTests")]
+	public class FindOneAndDeleteTests : IClassFixture<LaunchSettingsFixture>
     {
 		private const string DbName = "TestDb";
 		private const string CollectionName = "MyEntities";

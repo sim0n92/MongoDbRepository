@@ -10,8 +10,8 @@ using Xunit;
 
 namespace JohnKnoop.MongoRepository.IntegrationTests
 {
-	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
-    public class UpdateManyTests : IClassFixture<LaunchSettingsFixture>
+	[Collection("IntegrationTests")]
+	public class UpdateManyTests : IClassFixture<LaunchSettingsFixture>
     {
 		private const string DbName = "TestDb";
 		private const string CollectionName = "MyEntities";

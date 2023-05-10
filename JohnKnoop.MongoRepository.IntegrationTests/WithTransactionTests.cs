@@ -73,7 +73,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 	}
 
 
-	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
+	[Collection("IntegrationTests")]
 	public class WithTransactionTests : IClassFixture<LaunchSettingsFixture>
 	{
 		private readonly MongoClient _mongoClient;

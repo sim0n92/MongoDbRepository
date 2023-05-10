@@ -12,7 +12,8 @@ using Xunit;
 
 namespace JohnKnoop.MongoRepository.IntegrationTests
 {
-	class DummyEntity
+
+    class DummyEntity
 	{
 		public string MyProperty { get; private set; }
 		public string Id { get; private set; }
@@ -42,7 +43,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 		}
 	}
 
-	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
+	[Collection("IntegrationTests")]
 	public class AmbientSessionTests : IClassFixture<LaunchSettingsFixture>
 	{
 		private readonly MongoClient _mongoClient;

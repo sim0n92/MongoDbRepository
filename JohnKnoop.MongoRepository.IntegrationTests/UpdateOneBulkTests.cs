@@ -10,7 +10,7 @@ using Xunit;
 
 namespace JohnKnoop.MongoRepository.IntegrationTests
 {
-	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
+	[Collection("IntegrationTests")]
 	public class UpdateOneBulkTests : IClassFixture<LaunchSettingsFixture>
 	{
 		private readonly MongoClient _mongoClient;

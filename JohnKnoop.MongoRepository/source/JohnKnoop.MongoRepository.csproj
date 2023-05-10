@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
@@ -8,7 +8,7 @@
 		<PackageTags>repository mongodb multitenant</PackageTags>
 		<Authors>John Knoop</Authors>
 		<LangVersion>8.0</LangVersion>
-		<PackageReleaseNotes>UpdateOneOrInsertAsync</PackageReleaseNotes>
+		<PackageReleaseNotes>ArrayFilters helpers (experimental)</PackageReleaseNotes>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>$(MainVersion)</Version>
 		<AssemblyVersion>$(MainVersion)</AssemblyVersion>
@@ -27,10 +27,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="MongoDB.Bson" version="2.18.0" />
-		<PackageReference Include="MongoDB.Driver" version="2.18.0" />
-		<PackageReference Include="MongoDB.Driver.Core" version="2.18.0" />
-		<PackageReference Include="Newtonsoft.Json" version="13.0.1" />
+		<PackageReference Include="MongoDB.Bson" version="2.19.1" />
+		<PackageReference Include="MongoDB.Driver" version="2.19.1" />
+		<PackageReference Include="MongoDB.Driver.Core" version="2.19.1" />
+		<PackageReference Include="Newtonsoft.Json" version="13.0.3" />
 		<PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
 	</ItemGroup>
 
