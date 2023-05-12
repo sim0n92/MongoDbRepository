@@ -10,12 +10,14 @@ using MongoDB.Bson.Serialization.IdGenerators;
 using MongoDB.Driver;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Xunit;
 using static JohnKnoop.MongoRepository.IntegrationTests.UpdateOneBulkTests;
 
 namespace JohnKnoop.MongoRepository.IntegrationTests
 {
 	public class LaunchSettingsFixture : IDisposable
 	{
+		private static bool _mapDone = false;
 		public LaunchSettingsFixture()
 		{
 			using (var file = File.OpenText("Properties\\launchSettings.json"))
@@ -48,6 +50,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 		public void MapDb()
 		{
+			if(_mapDone) return;
 			//MongoRepository.Configure()
 			//.Database("TestDb", x => x
 			//		//.MapAlongWithSubclassesInSameAssebmly<MyBaseEntity>("MyEntities")
@@ -58,35 +61,40 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 			//.Build();
 
 			MongoRepository.Configure()
-	.DatabasePerTenant("TestDb", x => x
-		.Map<Show>("MyShows")
-		.MapAlongWithSubclassesInSameAssebmly<MyBaseEntity>("MyBaseEntities")
-		.MapAlongWithSubclassesInSameAssebmly<DummyEntity>("DummyEntities")
-		.MapAlongWithSubclassesInSameAssebmly<MySimpleEntity>("MySimpleEntities")
-		.MapAlongWithSubclassesInSameAssebmly<Person>("MyPersons")
-		.Map<ArrayContainer>("ArrayContainers")
-		.MapAlongWithSubclassesInSameAssebmly<FileGroup>("FileGroups", x => x.WithIndex("Files.Name", unique: false))
-		.Map<CustomMapped>(
-			x => x
-				.WithCustomClassMapping(
-					cm => {
-						cm.AutoMap();
-						cm.MapIdProperty("Id").SetIdGenerator(ObjectIdGenerator.Instance);
-						cm.MapProperty("Name").SetElementName("_name");
-					}
-			)
-		)
-		.Map<MyStandaloneEntity>("MyStandaloneEntities")
-		.Map<Item>("Items")
-	)
-	.AutoEnlistWithTransactionScopes()
-	.Build();
-
+				.DatabasePerTenant("TestDb", x => x
+					.MapAlongWithSubclassesInSameAssebmly<MyBaseEntity>("MyBaseEntities")
+					.MapAlongWithSubclassesInSameAssebmly<DummyEntity>("DummyEntities")
+					.MapAlongWithSubclassesInSameAssebmly<MySimpleEntity>("MySimpleEntities")
+					.MapAlongWithSubclassesInSameAssebmly<Person>("MyPersons")
+					.MapAlongWithSubclassesInSameAssebmly<FileGroup>("FileGroups", x => x.WithIndex("Files.Name", unique: false))
+					.Map<CustomMapped>(
+						x => x
+							.WithCustomClassMapping(
+								cm => {
+									cm.AutoMap();
+									cm.MapIdProperty("Id").SetIdGenerator(ObjectIdGenerator.Instance);
+									cm.MapProperty("Name").SetElementName("_name");
+								}
+						)
+					)
+					.Map<MyStandaloneEntity>("MyStandaloneEntities")
+					.Map<Item>("Items")
+					.Map<ArrayContainer>("ArrayContainers")
+					.Map<Show>("MyShows")
+				)
+				.AutoEnlistWithTransactionScopes()
+				.Build();
+			_mapDone = true;
 		}
 
 		public void Dispose()
 		{
 
 		}
+	}
+
+	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
+	public class NonParallelCollectionDefinitionClass
+	{
 	}
 }

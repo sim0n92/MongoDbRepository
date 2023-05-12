@@ -56,7 +56,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests.ArrayFiltersTests
 		public string Title { get; private set; }
 	}
 
-	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
+	[Collection("IntegrationTests")]
 	public class ArrayFiltersTests : IClassFixture<LaunchSettingsFixture>
 	{
 		private const string DbName = "_TestDb";
@@ -81,7 +81,6 @@ namespace JohnKnoop.MongoRepository.IntegrationTests.ArrayFiltersTests
 			{
 				_mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>(collectionName).WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
 			}
-			Thread.Sleep(1);
 			_repository = _mongoClient.GetRepository<Show>();
 
 		}
