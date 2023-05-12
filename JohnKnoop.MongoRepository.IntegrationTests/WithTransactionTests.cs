@@ -1,4 +1,4 @@
-﻿using MongoDB.Driver;
+using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -80,18 +80,19 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 		public WithTransactionTests(LaunchSettingsFixture launchSettingsFixture)
 		{
-			MongoRepository.Configure()
-				.Database("TestDb", x => x
-					.Map<MyStandaloneEntity>("MyStandaloneEntities")
-					.Map<ArrayContainer>("ArrayContainers")
-				)
-				.AutoEnlistWithTransactionScopes()
-				.Build();
+			launchSettingsFixture.MapDb();
+			//MongoRepository.Configure()
+			//	.Database("TestDb", x => x
+			//		.Map<MyStandaloneEntity>("MyStandaloneEntities")
+			//		.Map<ArrayContainer>("ArrayContainers")
+			//	)
+			//	.AutoEnlistWithTransactionScopes()
+			//	.Build();
 
 			this._mongoClient = new MongoClient(Environment.GetEnvironmentVariable("MongoDbConnectionString"));
 
-			_mongoClient.GetDatabase("TestDb").GetCollection<BsonDocument>("MyStandaloneEntities").DeleteMany(x => true);
-			_mongoClient.GetDatabase("TestDb").GetCollection<BsonDocument>("ArrayContainers").DeleteMany(x => true);
+			_mongoClient.GetDatabase("_TestDb").GetCollection<BsonDocument>("MyStandaloneEntities").WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
+			_mongoClient.GetDatabase("_TestDb").GetCollection<BsonDocument>("ArrayContainers").WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
 		}
 
 		[Fact]

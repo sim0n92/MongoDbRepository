@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
@@ -19,19 +19,21 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 		public TransactionConcurrencyTests(LaunchSettingsFixture launchSettingsFixture)
 		{
-			MongoRepository.Configure()
-				.DatabasePerTenant("TestDb", x => x
-					.Map<MyStandaloneEntity>("MyStandaloneEntities")
-				)
-				.AutoEnlistWithTransactionScopes()
-				.Build();
+			launchSettingsFixture.MapDb();
+
+			//MongoRepository.Configure()
+			//	.DatabasePerTenant("TestDb", x => x
+			//		.Map<MyStandaloneEntity>("MyStandaloneEntities")
+			//	)
+			//	.AutoEnlistWithTransactionScopes()
+			//	.Build();
 
 			this._mongoClient = new MongoClient(Environment.GetEnvironmentVariable("MongoDbConnectionString"));
 
-			_mongoClient.GetDatabase("a_TestDb").GetCollection<BsonDocument>("MyStandaloneEntities").DeleteMany(x => true);
-			_mongoClient.GetDatabase("b_TestDb").GetCollection<BsonDocument>("MyStandaloneEntities").DeleteMany(x => true);
-			_mongoClient.GetDatabase("c_TestDb").GetCollection<BsonDocument>("MyStandaloneEntities").DeleteMany(x => true);
-			_mongoClient.GetDatabase("d_TestDb").GetCollection<BsonDocument>("MyStandaloneEntities").DeleteMany(x => true);
+			_mongoClient.GetDatabase("a_TestDb").GetCollection<BsonDocument>("MyStandaloneEntities").WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
+			_mongoClient.GetDatabase("b_TestDb").GetCollection<BsonDocument>("MyStandaloneEntities").WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
+			_mongoClient.GetDatabase("c_TestDb").GetCollection<BsonDocument>("MyStandaloneEntities").WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
+			_mongoClient.GetDatabase("d_TestDb").GetCollection<BsonDocument>("MyStandaloneEntities").WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
 		}
 
 		[Fact]

@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System;
@@ -39,8 +39,8 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 	[Collection("IntegrationTests")]
 	public class FindOneAndDeleteTests : IClassFixture<LaunchSettingsFixture>
     {
-		private const string DbName = "TestDb";
-		private const string CollectionName = "MyEntities";
+		private const string DbName = "_TestDb";
+		private const string CollectionName = "MyBaseEntities";
 		private readonly MongoClient _mongoClient;
 		private readonly IRepository<MyBaseEntity> _repository;
 		private readonly string _baseEntityId;
@@ -48,21 +48,22 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 		public FindOneAndDeleteTests(LaunchSettingsFixture launchSettingsFixture)
 		{
+			launchSettingsFixture.MapDb();
             _mongoClient = new MongoClient(Environment.GetEnvironmentVariable("MongoDbConnectionString"));
 
-			MongoRepository.Configure()
-				.Database(DbName, x => x
-					.MapAlongWithSubclassesInSameAssebmly<MyBaseEntity>(CollectionName)
-				)
-				.AutoEnlistWithTransactionScopes()
-				.Build();
+			//MongoRepository.Configure()
+			//	.Database(DbName, x => x
+			//		.MapAlongWithSubclassesInSameAssebmly<MyBaseEntity>(CollectionName)
+			//	)
+			//	.AutoEnlistWithTransactionScopes()
+			//	.Build();
 
 			// Empty all collections in database
 			foreach (var collectionName in _mongoClient.GetDatabase(DbName).ListCollectionNames().ToEnumerable())
 			{
 				if (!collectionName.Contains("system"))
 				{
-					_mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>(collectionName).DeleteMany(x => true);
+					_mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>(collectionName).WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
 				}
 			}
 

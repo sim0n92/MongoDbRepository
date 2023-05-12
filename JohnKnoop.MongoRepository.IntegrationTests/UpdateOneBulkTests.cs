@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NodaTime;
@@ -17,18 +17,19 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 		public UpdateOneBulkTests(LaunchSettingsFixture fixture)
 		{
-			MongoRepository.Configure()
-				.DatabasePerTenant("TestDb", x => x
-					.Map<Item>("Items")
-				)
-				.AutoEnlistWithTransactionScopes()
-				.Build();
+			fixture.MapDb();
+			//MongoRepository.Configure()
+			//	.DatabasePerTenant("TestDb", x => x
+			//		.Map<Item>("Items")
+			//	)
+			//	.AutoEnlistWithTransactionScopes()
+			//	.Build();
 
 			MongoDb.Bson.NodaTime.NodaTimeSerializers.Register();
 
 			_mongoClient = new MongoClient(Environment.GetEnvironmentVariable("MongoDbConnectionString"));
 
-			_mongoClient.GetDatabase("_TestDb").GetCollection<BsonDocument>("Items").DeleteMany(x => true);
+			_mongoClient.GetDatabase("_TestDb").GetCollection<BsonDocument>("Items").WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
 		}
 
 		public record RequestVariant(string ItemId, string SuppliersItemNumber);

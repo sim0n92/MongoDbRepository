@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson.Serialization.IdGenerators;
@@ -153,7 +153,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 	[Collection("IntegrationTests")]
 	public class InsertAndFindOneSpeedTests : IClassFixture<LaunchSettingsFixture>
     {
-		private const string DbName = "TestDb";
+		private const string DbName = "_TestDb";
 		private const string CollectionName = "FileGroups";
 		private readonly MongoClient _mongoClient;
 		private readonly IRepository<FileGroup> _repository;
@@ -164,64 +164,39 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 		public InsertAndFindOneSpeedTests(LaunchSettingsFixture launchSettingsFixture, ITestOutputHelper testOutputHelper)
 		{
+			launchSettingsFixture.MapDb();
+
 			_testOutputHelper = testOutputHelper;
 			_mongoClient = new MongoClient(Environment.GetEnvironmentVariable("MongoDbConnectionString"));
 
-			//var db = _mongoClient.GetDatabase("admin");
-			//var command = new BsonDocumentCommand<BsonDocument>(
-			//		new BsonDocument() { { "replSetGetStatus", 1 } });
 
-			//try
-			//{
-			//	var res = db.RunCommand<BsonDocument>(command);
-			//	bool rsOk = false;
-			//	if (res.TryGetValue("set", out BsonValue name))
-			//	{
-			//		if (name.AsString == "rs0")
-			//		{
-			//			if (res.TryGetValue("myState", out BsonValue state))
-			//			{
-			//				if (state.AsInt32 == 1)
-			//				{
-			//					rsOk = true;
-			//				}
-			//			}
-			//		}
-			//	}
-			//}catch(Exception ex)
-   //         {
-			//	int i = 0;
-   //         }
-
-			//_mongoClient = new MongoClient(Environment.GetEnvironmentVariable("MongoDbConnectionString"));
-
-			MongoRepository.Configure()
-				.Database(DbName, x => x
-					.MapAlongWithSubclassesInSameAssebmly<FileGroup>(CollectionName
-                    ,
-                        x => x
-                            .WithIndex("Files.Name", unique: false)
-                    )
-					.Map<CustomMapped>(
-						x => x
-							.WithCustomClassMapping( 
-								cm => {
-									cm.AutoMap();
-									cm.MapIdProperty("Id").SetIdGenerator(ObjectIdGenerator.Instance);
-									cm.MapProperty("Name").SetElementName("_name");
-								}
-						)
-					)
-                )
-				.AutoEnlistWithTransactionScopes()
-				.Build();
+			//MongoRepository.Configure()
+			//	.Database(DbName, x => x
+			//		.MapAlongWithSubclassesInSameAssebmly<FileGroup>(CollectionName
+   //                 ,
+   //                     x => x
+   //                         .WithIndex("Files.Name", unique: false)
+   //                 )
+			//		.Map<CustomMapped>(
+			//			x => x
+			//				.WithCustomClassMapping( 
+			//					cm => {
+			//						cm.AutoMap();
+			//						cm.MapIdProperty("Id").SetIdGenerator(ObjectIdGenerator.Instance);
+			//						cm.MapProperty("Name").SetElementName("_name");
+			//					}
+			//			)
+			//		)
+   //             )
+			//	.AutoEnlistWithTransactionScopes()
+			//	.Build();
 
 			// Empty all collections in database
 			foreach (var collectionName in _mongoClient.GetDatabase(DbName).ListCollectionNames().ToEnumerable())
 			{
 				if (!collectionName.Contains("system"))
 				{
-					_mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>(collectionName).DeleteMany(x => true);
+					_mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>(collectionName).WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
 				}
 			}
 

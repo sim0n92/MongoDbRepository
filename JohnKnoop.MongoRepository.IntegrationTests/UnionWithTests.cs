@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using JohnKnoop.MongoRepository.IntegrationTests.TestEntities;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -16,27 +16,28 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
 	public class UnionWithTests : IClassFixture<LaunchSettingsFixture>
 	{
-		private const string DbName = "TestDb";
+		private const string DbName = "_TestDb";
 		private readonly MongoClient _mongoClient;
 		private readonly IRepository<MySimpleEntity> _simpEntityRepo;
 		private readonly IRepository<Person> _personRepo;
 
 		public UnionWithTests(LaunchSettingsFixture fixture)
 		{
+			fixture.MapDb();
 			_mongoClient = new MongoClient(Environment.GetEnvironmentVariable("MongoDbConnectionString"));
 
-			MongoRepository.Configure()
-				.Database(DbName, x => x
-					.MapAlongWithSubclassesInSameAssebmly<MySimpleEntity>()
-					.MapAlongWithSubclassesInSameAssebmly<Person>()
-				)
-				.AutoEnlistWithTransactionScopes()
-				.Build();
+			//MongoRepository.Configure()
+			//	.Database(DbName, x => x
+			//		.MapAlongWithSubclassesInSameAssebmly<MySimpleEntity>()
+			//		.MapAlongWithSubclassesInSameAssebmly<Person>()
+			//	)
+			//	.AutoEnlistWithTransactionScopes()
+			//	.Build();
 
 			// Empty all collections in database
 			foreach (var collectionName in _mongoClient.GetDatabase(DbName).ListCollectionNames().ToEnumerable())
 			{
-				_mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>(collectionName).DeleteMany(x => true);
+				_mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>(collectionName).WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
 			}
 
 			_simpEntityRepo = _mongoClient.GetRepository<MySimpleEntity>();

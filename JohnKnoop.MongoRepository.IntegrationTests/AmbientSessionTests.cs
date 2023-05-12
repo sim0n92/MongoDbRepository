@@ -50,25 +50,26 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 
 		public AmbientSessionTests(LaunchSettingsFixture launchSettingsFixture)
 		{
-			MongoRepository.Configure()
-				.DatabasePerTenant("TestDb", x => x
-					.MapAlongWithSubclassesInSameAssebmly<DummyEntity>("DummyEntities")
-					.Map<ArrayContainer>("ArrayContainers")
-				)
-				.AutoEnlistWithTransactionScopes()
-				.Build();
+			launchSettingsFixture.MapDb();
+			//MongoRepository.Configure()
+			//	.DatabasePerTenant("TestDb", x => x
+			//		.MapAlongWithSubclassesInSameAssebmly<DummyEntity>("DummyEntities")
+			//		.Map<ArrayContainer>("ArrayContainers")
+			//	)
+			//	.AutoEnlistWithTransactionScopes()
+			//	.Build();
 
 			this._mongoClient = new MongoClient(Environment.GetEnvironmentVariable("MongoDbConnectionString"));
 
-			_mongoClient.GetRepository<DummyEntity>("tenant_a").DeleteManyAsync(x => true).Wait();
-			_mongoClient.GetRepository<DummyEntity>("tenant_b").DeleteManyAsync(x => true).Wait();
-			_mongoClient.GetRepository<ArrayContainer>("tenant_c").DeleteManyAsync(x => true).Wait();
-			_mongoClient.GetRepository<DummyEntity>().DeleteManyAsync(x => true).Wait();
+			_mongoClient.GetRepository<DummyEntity>("tenant_a").WithWriteConcern(WriteConcern.WMajority).DeleteManyAsync(x => true).Wait();
+			_mongoClient.GetRepository<DummyEntity>("tenant_b").WithWriteConcern(WriteConcern.WMajority).DeleteManyAsync(x => true).Wait();
+			_mongoClient.GetRepository<ArrayContainer>("tenant_c").WithWriteConcern(WriteConcern.WMajority).DeleteManyAsync(x => true).Wait();
+			_mongoClient.GetRepository<DummyEntity>().WithWriteConcern(WriteConcern.WMajority).DeleteManyAsync(x => true).Wait();
 
-			_mongoClient.GetRepository<DummyEntity>("tenant_a").PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
-			_mongoClient.GetRepository<DummyEntity>("tenant_b").PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
-			_mongoClient.GetRepository<ArrayContainer>("tenant_c").PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
-			_mongoClient.GetRepository<DummyEntity>().PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
+			_mongoClient.GetRepository<DummyEntity>("tenant_a").WithWriteConcern(WriteConcern.WMajority).PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
+			_mongoClient.GetRepository<DummyEntity>("tenant_b").WithWriteConcern(WriteConcern.WMajority).PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
+			_mongoClient.GetRepository<ArrayContainer>("tenant_c").WithWriteConcern(WriteConcern.WMajority).PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
+			_mongoClient.GetRepository<DummyEntity>().WithWriteConcern(WriteConcern.WMajority).PermamentlyDeleteSoftDeletedAsync(x => true).Wait();
 		}
 
 		// DeleteManyAsync

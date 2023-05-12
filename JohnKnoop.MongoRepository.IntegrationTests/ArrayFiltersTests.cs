@@ -15,6 +15,7 @@ using System.Reflection.Metadata.Ecma335;
 using JohnKnoop.MongoRepository;
 using System.Threading.Tasks;
 using Xunit;
+using System.Threading;
 
 namespace JohnKnoop.MongoRepository.IntegrationTests.ArrayFiltersTests
 {
@@ -58,27 +59,29 @@ namespace JohnKnoop.MongoRepository.IntegrationTests.ArrayFiltersTests
 	[CollectionDefinition("IntegrationTests", DisableParallelization = true)]
 	public class ArrayFiltersTests : IClassFixture<LaunchSettingsFixture>
 	{
-		private const string DbName = "TestDb";
-		private const string CollectionName = "MyEntities";
+		private const string DbName = "_TestDb";
+		private const string CollectionName = "MyShows";
 		private readonly MongoClient _mongoClient;
 		private readonly IRepository<Show> _repository;
 
 		public ArrayFiltersTests(LaunchSettingsFixture launchSettingsFixture)
 		{
+			launchSettingsFixture.MapDb();
+
 			_mongoClient = new MongoClient(Environment.GetEnvironmentVariable("MongoDbConnectionString"));
 
-			MongoRepository.Configure()
-				.Database(DbName, x => x
-					.Map<Show>(CollectionName)
-				)
-				.Build();
+			//MongoRepository.Configure()
+			//	.Database(DbName, x => x
+			//		.Map<Show>(CollectionName)
+			//	)
+			//	.Build();
 
 			// Empty all collections in database
 			foreach (var collectionName in _mongoClient.GetDatabase(DbName).ListCollectionNames().ToEnumerable())
 			{
-				_mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>(collectionName).DeleteMany(x => true);
+				_mongoClient.GetDatabase(DbName).GetCollection<BsonDocument>(collectionName).WithWriteConcern(WriteConcern.WMajority).DeleteMany(x => true);
 			}
-
+			Thread.Sleep(1);
 			_repository = _mongoClient.GetRepository<Show>();
 
 		}
