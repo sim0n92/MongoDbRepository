@@ -29,9 +29,9 @@ namespace JohnKnoop.MongoRepository
 				try
 				{
 					filter = (Expression<T>)a.Operand;
-				}catch(Exception ex)
+				}catch(Exception)
                 {
-					int i = 0;
+					throw;
                 }
 
 				return node;
