@@ -255,7 +255,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 					await Task.Delay(1);
 
 					await MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo);
-					MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo).Wait();
+					await MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo);
 
 					// No commit
 				}
@@ -295,7 +295,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 					await Task.Delay(1);
 
 					await MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo);
-					MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo).Wait();
+					await MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo);
 
 					transaction.Complete();
 				}
@@ -376,7 +376,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 				using (var transaction = repo.StartTransaction())
 				{
 					await MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo);
-					MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo).Wait();
+					await MyStaticInserter.InsertDocument(new DummyEntity("Hola senor"), repo);
 
 					await transaction.CommitAsync(); 
 				}

@@ -295,8 +295,8 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 			Stopwatch sw = new Stopwatch();
 
 			sw.Start();
-			records.ForEach(r => {
-				Insert(r).Wait();
+			records.ForEach(async r => {
+				await Insert(r);
 				// _repository.InsertAsync(r).Wait();
 			});
 				

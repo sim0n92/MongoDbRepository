@@ -148,7 +148,7 @@ namespace JohnKnoop.MongoRepository.IntegrationTests
 						await Task.Delay(1);
 
 						await MyStaticInserter.InsertDocument(new MyStandaloneEntity("Jeff", new SharedClass("Doe")), repoD);
-						MyStaticInserter.InsertDocument(new MyStandaloneEntity("Jeff", new SharedClass("Doe")), repoD).Wait();
+						await MyStaticInserter.InsertDocument(new MyStandaloneEntity("Jeff", new SharedClass("Doe")), repoD);
 
 						// No commit
 					}
